@@ -2,7 +2,19 @@ import axios from 'axios';
 import crypto from 'crypto';
 
 // In-memory store for PKCE verifiers
+// Note: This will not persist across server restarts on Render
+// For production with multiple instances, consider using Redis
 const verifierStore = new Map();
+
+// Clean up expired verifiers every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [state, data] of verifierStore.entries()) {
+    if (now - data.createdAt > 10 * 60 * 1000) {
+      verifierStore.delete(state);
+    }
+  }
+}, 5 * 60 * 1000);
 
 // Generate PKCE code verifier
 function generateCodeVerifier() {
@@ -24,8 +36,13 @@ export async function redirectToDeriv(req, res) {
     const codeChallenge = await generateCodeChallenge(codeVerifier);
     const state = crypto.randomUUID();
     
-    verifierStore.set(state, { codeVerifier, createdAt: Date.now() });
-    setTimeout(() => verifierStore.delete(state), 10 * 60 * 1000); // Increased to 10 minutes
+    verifierStore.set(state, { 
+      codeVerifier, 
+      createdAt: Date.now() 
+    });
+    
+    // Clean up after 10 minutes
+    setTimeout(() => verifierStore.delete(state), 10 * 60 * 1000);
     
     const authUrl = new URL('https://auth.deriv.com/oauth2/auth');
     authUrl.searchParams.set('response_type', 'code');
@@ -36,7 +53,7 @@ export async function redirectToDeriv(req, res) {
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
     
-    console.log('Redirecting to Deriv OAuth URL:', authUrl.toString());
+    console.log('Redirecting to Deriv OAuth');
     res.redirect(authUrl.toString());
     
   } catch (error) {
@@ -51,26 +68,25 @@ export async function redirectToDeriv(req, res) {
 export async function handleCallback(req, res) {
   const { code, state } = req.query;
   
-  console.log('=== OAuth Callback Received ===');
-  console.log('Code present:', !!code);
-  console.log('State present:', !!state);
-  console.log('Full URL:', req.url);
+  console.log('OAuth Callback received');
   
-  // Prevent duplicate processing - check if already processed
+  // Prevent duplicate processing
   if (req.session?.processed) {
-    console.log('Callback already processed, skipping...');
+    console.log('Callback already processed');
     return;
   }
   
   if (!code || !state) {
     console.error('Missing code or state');
-    return res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Missing code or state`);
+    const frontendUrl = process.env.FRONTEND_URL || 'https://wisetrades.netlify.app';
+    return res.redirect(`${frontendUrl}/auth-error?message=Missing+code+or+state`);
   }
   
   const sessionData = verifierStore.get(state);
   if (!sessionData) {
     console.error('Invalid or expired state');
-    return res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Invalid or expired state`);
+    const frontendUrl = process.env.FRONTEND_URL || 'https://wisetrades.netlify.app';
+    return res.redirect(`${frontendUrl}/auth-error?message=Invalid+or+expired+state`);
   }
   
   // Mark as processed to prevent duplicate handling
@@ -92,57 +108,59 @@ export async function handleCallback(req, res) {
       {
         headers: { 
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        timeout: 10000 // 10 second timeout
       }
     );
     
-    console.log('Token exchange successful!');
+    console.log('Token exchange successful');
     
     const { access_token, expires_in, refresh_token } = tokenResponse.data;
     
-    // Clear any existing cookies first
+    // Clear existing cookies
     res.clearCookie('deriv_access_token', { path: '/' });
     res.clearCookie('is_authenticated', { path: '/' });
     
-    // Set HTTP-only cookies with proper settings for localhost
+    // Determine if we're in production
     const isProduction = process.env.NODE_ENV === 'production';
     
-    res.cookie('deriv_access_token', access_token, {
+    // Set cookies with proper production settings
+    const cookieOptions = {
       httpOnly: true,
-      secure: false, // Set to false for localhost development
+      secure: isProduction, // true in production (HTTPS on Render)
       sameSite: 'lax',
-      maxAge: expires_in * 1000,
       path: '/'
+    };
+    
+    res.cookie('deriv_access_token', access_token, {
+      ...cookieOptions,
+      maxAge: expires_in * 1000
     });
     
     res.cookie('is_authenticated', 'true', {
-      httpOnly: false,
-      secure: false, // Set to false for localhost development
-      sameSite: 'lax',
-      maxAge: expires_in * 1000,
-      path: '/'
+      ...cookieOptions,
+      httpOnly: false, // This one needs to be readable by frontend
+      maxAge: expires_in * 1000
     });
     
     if (refresh_token) {
       res.cookie('deriv_refresh_token', refresh_token, {
-        httpOnly: true,
-        secure: false, // Set to false for localhost development
-        sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        path: '/'
+        ...cookieOptions,
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
       });
     }
     
-    // Redirect back to Angular frontend dashboard
-    const redirectUrl = `${process.env.FRONTEND_URL}/dashboard`;
-    console.log('Redirecting to:', redirectUrl);
+    // Redirect to frontend dashboard
+    const frontendUrl = process.env.FRONTEND_URL || 'https://wisetrades.netlify.app';
+    const redirectUrl = `${frontendUrl}/dashboard`;
+    console.log('Redirecting to dashboard');
     
-    // Use 302 redirect
-    res.status(302).redirect(redirectUrl);
+    res.redirect(redirectUrl);
     
   } catch (error) {
     console.error('Token exchange failed:', error.response?.data || error.message);
-    res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Authentication failed`);
+    const frontendUrl = process.env.FRONTEND_URL || 'https://wisetrades.netlify.app';
+    res.redirect(`${frontendUrl}/auth-error?message=Authentication+failed`);
   }
 }
 
@@ -151,8 +169,6 @@ export async function handleCallback(req, res) {
  */
 export async function getUserInfo(req, res) {
   const token = req.cookies.deriv_access_token;
-  
-  console.log('getUserInfo called, token present:', !!token);
   
   if (!token) {
     return res.status(401).json({ authenticated: false });
@@ -163,7 +179,8 @@ export async function getUserInfo(req, res) {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Deriv-App-ID': process.env.DERIV_APP_ID
-      }
+      },
+      timeout: 10000
     });
     
     res.json({ 
@@ -184,9 +201,17 @@ export async function getUserInfo(req, res) {
  */
 export function logout(req, res) {
   console.log('Logout called');
-  res.clearCookie('deriv_access_token', { path: '/' });
-  res.clearCookie('deriv_refresh_token', { path: '/' });
-  res.clearCookie('is_authenticated', { path: '/' });
+  
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieOptions = {
+    path: '/',
+    secure: isProduction
+  };
+  
+  res.clearCookie('deriv_access_token', cookieOptions);
+  res.clearCookie('deriv_refresh_token', cookieOptions);
+  res.clearCookie('is_authenticated', cookieOptions);
+  
   res.json({ success: true, message: 'Logged out successfully' });
 }
 
@@ -209,26 +234,27 @@ export async function refreshToken(req, res) {
         refresh_token: refreshToken
       }),
       {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 10000
       }
     );
     
     const { access_token, expires_in } = response.data;
     
-    res.cookie('deriv_access_token', access_token, {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
       httpOnly: true,
-      secure: false, // Set to false for localhost development
+      secure: isProduction,
       sameSite: 'lax',
-      maxAge: expires_in * 1000,
-      path: '/'
-    });
+      path: '/',
+      maxAge: expires_in * 1000
+    };
+    
+    res.cookie('deriv_access_token', access_token, cookieOptions);
     
     res.cookie('is_authenticated', 'true', {
-      httpOnly: false,
-      secure: false, // Set to false for localhost development
-      sameSite: 'lax',
-      maxAge: expires_in * 1000,
-      path: '/'
+      ...cookieOptions,
+      httpOnly: false
     });
     
     res.json({ success: true, expires_in });
