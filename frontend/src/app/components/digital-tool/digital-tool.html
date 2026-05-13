@@ -1,0 +1,240 @@
+<div class="digital-tool">
+  <!-- Header -->
+  <div class="header">
+    <h1>📊 Digital Options Trading Tool</h1>
+    <p>Real-time market analysis and digit frequency tracking</p>
+  </div>
+
+  <!-- Market Controls -->
+  <div class="controls-card">
+    <div class="controls-row">
+      <div class="control-group">
+        <label>Market:</label>
+        <select [(ngModel)]="selectedMarket" (change)="onMarketChange()">
+          <option *ngFor="let market of markets" [value]="market">{{ market }}</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <div class="live-indicator">
+          <span class="live-dot" [class.paused]="!isLiveUpdating"></span>
+          <span>{{ isLiveUpdating ? 'LIVE' : 'PAUSED' }}</span>
+        </div>
+        <button class="btn-live" (click)="toggleLiveUpdates()">
+          {{ isLiveUpdating ? '⏸️ Pause' : '▶️ Start' }}
+        </button>
+      </div>
+      <div class="total-ticks">
+        📈 Total: {{ totalTicks }} ticks
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Price with Animation -->
+  <div class="price-card" [class.price-up]="priceDirection === 'up'" [class.price-down]="priceDirection === 'down'">
+    <div class="price-label">Current Price</div>
+    <div class="price-value">
+      <span class="price-number">{{ currentPrice | number:'1.2-2' }}</span>
+      <span class="price-direction">
+        <span *ngIf="priceDirection === 'up'">▲</span>
+        <span *ngIf="priceDirection === 'down'">▼</span>
+      </span>
+    </div>
+    <div class="price-details">
+      <span>Last Digit: <strong class="last-digit">{{ lastDigit }}</strong></span>
+      <span>Change: <strong [class.up]="lastChange > 0" [class.down]="lastChange < 0">{{ lastChange > 0 ? '+' : '' }}{{ lastChange | number:'1.2-2' }}</strong></span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width]="(countdown / updateSpeed) * 100 + '%'"></div>
+    </div>
+    <div class="next-tick">⏱️ Next tick in {{ countdown }}ms</div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'digits'" (click)="setActiveTab('digits')">🔢 Digits</button>
+    <button class="tab" [class.active]="activeTab === 'overunder'" (click)="setActiveTab('overunder')">⬆️ Over/Under</button>
+    <button class="tab" [class.active]="activeTab === 'matches'" (click)="setActiveTab('matches')">✅ Matches</button>
+    <button class="tab" [class.active]="activeTab === 'evenodd'" (click)="setActiveTab('evenodd')">🔢 Even/Odd</button>
+    <button class="tab" [class.active]="activeTab === 'risefall'" (click)="setActiveTab('risefall')">📈 Rise/Fall</button>
+  </div>
+
+  <!-- Digits Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'digits'">
+    <div class="card">
+      <h3>📊 Live Digit Frequency</h3>
+      <p class="subtitle">Click any digit to use it for Match/Differ analysis</p>
+      <div class="digit-grid">
+        <div *ngFor="let digit of digits; let i = index" class="digit-item">
+          <div class="circle-container" 
+               [class.animate]="isDigitAnimating(digit)" 
+               (click)="selectDigit(digit)">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" stroke-width="6"/>
+              <circle
+                cx="50" cy="50" r="42" fill="none"
+                [attr.stroke]="getCircleColor(i, 0)"
+                stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="263.89"
+                [attr.stroke-dashoffset]="getOffset(digitFrequencies[i])"
+                class="progress-circle"
+              />
+            </svg>
+            <div class="circle-label" [class.active]="lastDigit === digit">
+              <span class="digit">{{ digit }}</span>
+            </div>
+          </div>
+          <div class="digit-stats">
+            <div class="percentage">{{ digitFrequencies[i] }}%</div>
+            <div class="count">{{ digitCounts[i] }} ticks</div>
+          </div>
+          <div class="mini-bar">
+            <div class="mini-fill" [style.width]="digitFrequencies[i] + '%'" [style.background]="getCircleColor(i, 0)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Over/Under Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'overunder'">
+    <div class="card">
+      <h3>⚖️ Over/Under Analysis</h3>
+      <div class="threshold-control">
+        <button class="threshold-btn" (click)="adjustThreshold(-10)">-10</button>
+        <span class="threshold-value">Threshold: {{ threshold }}</span>
+        <button class="threshold-btn" (click)="adjustThreshold(10)">+10</button>
+      </div>
+      <div class="split-stats">
+        <div class="stat-box over" (click)="incrementOver()">
+          <div class="icon">📈</div>
+          <div class="percentage">{{ overPercentage }}%</div>
+          <div class="label">Over {{ threshold }}</div>
+          <div class="count">{{ overCount }}</div>
+          <div class="bar"><div class="fill" [style.width]="overPercentage + '%'"></div></div>
+        </div>
+        <div class="stat-box under" (click)="incrementUnder()">
+          <div class="icon">📉</div>
+          <div class="percentage">{{ underPercentage }}%</div>
+          <div class="label">Under {{ threshold }}</div>
+          <div class="count">{{ underCount }}</div>
+          <div class="bar"><div class="fill" [style.width]="underPercentage + '%'"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matches/Differs Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'matches'">
+    <div class="card">
+      <h3>🎯 Matches/Differs Analysis</h3>
+      <p class="subtitle">Comparing against digit: <strong class="compare-digit">{{ selectedCompareDigit }}</strong> (click on any digit above to change)</p>
+      <div class="split-stats">
+        <div class="stat-box match">
+          <div class="icon">✅</div>
+          <div class="percentage">{{ matchesPercentage }}%</div>
+          <div class="label">Matches {{ selectedCompareDigit }}</div>
+          <div class="count">{{ matchesCount }}</div>
+        </div>
+        <div class="stat-box differ">
+          <div class="icon">❌</div>
+          <div class="percentage">{{ differsPercentage }}%</div>
+          <div class="label">Differs from {{ selectedCompareDigit }}</div>
+          <div class="count">{{ differsCount }}</div>
+        </div>
+      </div>
+      <div class="pattern-container">
+        <div class="pattern-label">Recent Pattern (✓=Match, ✗=Differs)</div>
+        <div class="pattern">
+          <span *ngFor="let m of getRecentMatchPattern()" class="pattern-chip" [class.match]="m === '✓'" [class.differ]="m === '✗'">{{ m }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Even/Odd Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'evenodd'">
+    <div class="card">
+      <h3>🔢 Even/Odd Analysis</h3>
+      <div class="split-stats">
+        <div class="stat-box even">
+          <div class="icon">2️⃣</div>
+          <div class="percentage">{{ evenPercentage }}%</div>
+          <div class="label">Even (0,2,4,6,8)</div>
+          <div class="count">{{ evenCount }}</div>
+          <div class="bar"><div class="fill" [style.width]="evenPercentage + '%'"></div></div>
+        </div>
+        <div class="stat-box odd">
+          <div class="icon">1️⃣</div>
+          <div class="percentage">{{ oddPercentage }}%</div>
+          <div class="label">Odd (1,3,5,7,9)</div>
+          <div class="count">{{ oddCount }}</div>
+          <div class="bar"><div class="fill" [style.width]="oddPercentage + '%'"></div></div>
+        </div>
+      </div>
+      <div class="streak-info" *ngIf="evenOddStreak > 2">
+        🔥 Current Streak: {{ evenOddStreak }} {{ evenOddStreakType }} in a row!
+      </div>
+      <div class="pattern-container">
+        <div class="pattern-label">Recent Pattern (E=Even, O=Odd)</div>
+        <div class="pattern">
+          <span *ngFor="let p of getRecentEvenOddPattern()" class="pattern-chip" [class.even]="p === 'E'" [class.odd]="p === 'O'">{{ p }}</span>
+        </div>
+      </div>
+      <button class="show-more" (click)="showMoreEvenOdd = !showMoreEvenOdd">
+        {{ showMoreEvenOdd ? 'Show Less' : 'Show More' }}
+      </button>
+      <div class="more-info" *ngIf="showMoreEvenOdd">
+        <p>📊 Even: {{ evenCount }} times ({{ evenPercentage }}%)</p>
+        <p>📊 Odd: {{ oddCount }} times ({{ oddPercentage }}%)</p>
+        <p>📈 Max Even %: {{ maxEvenPercentage }}% | Max Odd %: {{ maxOddPercentage }}%</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rise/Fall Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'risefall'">
+    <div class="card">
+      <h3>📈📉 Rise/Fall Analysis</h3>
+      <div class="split-stats">
+        <div class="stat-box rise">
+          <div class="icon">📈</div>
+          <div class="percentage">{{ risePercentage }}%</div>
+          <div class="label">Rising Prices</div>
+          <div class="count">{{ riseCount }}</div>
+          <div class="bar"><div class="fill" [style.width]="risePercentage + '%'"></div></div>
+        </div>
+        <div class="stat-box fall">
+          <div class="icon">📉</div>
+          <div class="percentage">{{ fallPercentage }}%</div>
+          <div class="label">Falling Prices</div>
+          <div class="count">{{ fallCount }}</div>
+          <div class="bar"><div class="fill" [style.width]="fallPercentage + '%'"></div></div>
+        </div>
+      </div>
+      <button class="show-more" (click)="showMoreRiseFall = !showMoreRiseFall">
+        {{ showMoreRiseFall ? 'Show Less' : 'Show More' }}
+      </button>
+      <div class="more-info" *ngIf="showMoreRiseFall">
+        <p>📈 Largest Rise: +{{ maxRise | number:'1.2' }}</p>
+        <p>📉 Largest Fall: {{ maxFall | number:'1.2' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-buttons">
+    <button class="btn-primary" (click)="generateManualTick()">➕ Generate Manual Tick</button>
+    <button class="btn-secondary" (click)="refreshAll()">🔄 Reset All Data</button>
+  </div>
+
+  <!-- Live Update Indicator -->
+  <div class="live-footer" *ngIf="isLiveUpdating">
+    <span class="live-pulse"></span>
+    Live updates active - watching for digit patterns
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    ⚠️ Risk Disclaimer: Past performance does not guarantee future results. This analysis is for informational purposes only.
+  </div>
+</div>

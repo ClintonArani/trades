@@ -1,0 +1,499 @@
+/* ================= SCROLLBAR HIDING ================= */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for Chrome, Safari, Edge */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for Firefox */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for IE */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+}
+
+/* Hide navbar scrollbar but keep functionality */
+.navbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.navbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* ================= NAVIGATION LI STYLES ================= */
+li {
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+li:active {
+  transform: scale(0.95);
+}
+
+/* ================= GOOGLE DRIVE ICON ================= */
+.google-drive-icon {
+  background: linear-gradient(
+    45deg,
+    #4285F4,
+    #34A853,
+    #FBBC05,
+    #EA4335
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ================= AI SCANNER FLOATING BUTTON ================= */
+.ai-scanner-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+/* Main button */
+.ai-button {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #6b5cff, #4b3df0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 20px;
+  position: relative;
+  box-shadow: 0 0 20px rgba(107, 92, 255, 0.6);
+  transition: transform 0.3s ease;
+}
+
+.ai-scanner-container:hover .ai-button {
+  transform: scale(1.05);
+}
+
+/* AI text */
+.ai-text {
+  z-index: 2;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* Rotating arm */
+.rotating-arm {
+  position: absolute;
+  width: 2px;
+  height: 30px;
+  background: white;
+  top: 5px;
+  transform-origin: bottom center;
+  animation: rotateArm 2s linear infinite;
+}
+
+@keyframes rotateArm {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Pulse rings */
+.pulse-ring {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(107, 92, 255, 0.5);
+  border-radius: 50%;
+  animation: pulse 2.5s infinite;
+}
+
+/* Staggered delays */
+.delay-0 { animation-delay: 0s; }
+.delay-1 { animation-delay: 0.6s; }
+.delay-2 { animation-delay: 1.2s; }
+.delay-3 { animation-delay: 1.8s; }
+
+/* Pulse animation */
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.7);
+    opacity: 0;
+  }
+}
+
+/* Tooltip */
+.ai-tooltip {
+  position: absolute;
+  bottom: 80px;
+  right: 0;
+  background: #2d2d2d;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  width: 160px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: 0.3s;
+  pointer-events: none;
+  font-size: 12px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.ai-scanner-container:hover .ai-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Button gradient for scan button */
+.scan-btn {
+  background: linear-gradient(to right, #0361f8, #5906e9);
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* ================= UTILITY CLASSES ================= */
+/* Ensure progress bar transitions work */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.duration-300 {
+  transition-duration: 300ms;
+}
+
+.ease-out {
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ================= MAIN APP CONTAINER ================= */
+.app-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevents main container from scrolling */
+}
+
+.sticky-header {
+  flex-shrink: 0; /* Header never shrinks */
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 1px solid #2d3561;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.auth-buttons button {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-signup {
+  background: transparent;
+  color: #a0aec0;
+  border: 1.5px solid #4a5568;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.btn-signup:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #667eea;
+  color: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+.btn-signin {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-signin:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-logout {
+  background: transparent;
+  color: #f56565;
+  border: 1.5px solid #f56565;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.btn-logout:hover {
+  background: rgba(245, 101, 101, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Navbar Styles - No visible scrollbar */
+.navbar {
+  padding: 0 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.navbar::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-container {
+  display: inline-flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  color: #a0aec0;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #cbd5e0;
+}
+
+.nav-link.active {
+  background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+  color: #667eea;
+  border-bottom: 2px solid #667eea;
+}
+
+.nav-icon {
+  font-size: 18px;
+}
+
+.nav-label {
+  font-size: 13px;
+}
+
+/* Main Content - Takes remaining space, NO vertical scroll */
+.main-content {
+  flex: 1;
+  /* overflow: auto; Changed from auto to visible */
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make all router outlet containers take only needed height */
+.main-content > * {
+  height: auto;
+  width: 100%;
+  display: block;
+  flex: 1;
+}
+
+/* Iframe styling - only if needed */
+.main-content iframe,
+.main-content ::ng-deep iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  display: block !important;
+}
+
+/* Responsive Breakpoints */
+@media (min-width: 640px) {
+  .header-top {
+    padding: 14px 24px;
+  }
+  
+  .logo h1 {
+    font-size: 1.5rem;
+  }
+  
+  .auth-buttons {
+    gap: 12px;
+  }
+  
+  .nav-label {
+    display: inline;
+  }
+  
+  .navbar {
+    padding: 0 20px;
+  }
+}
+
+@media (min-width: 768px) {
+  .header-top {
+    padding: 16px 32px;
+  }
+  
+  .logo h1 {
+    font-size: 1.75rem;
+  }
+  
+  .auth-buttons {
+    gap: 14px;
+  }
+  
+  .nav-link {
+    padding: 10px 20px;
+  }
+  
+  .navbar {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .header-top {
+    padding: 16px 40px;
+  }
+  
+  .logo h1 {
+    font-size: 2rem;
+  }
+  
+  .nav-link {
+    padding: 12px 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-label {
+    display: none;
+  }
+  
+  .nav-link {
+    padding: 8px 12px;
+  }
+  
+  .nav-icon {
+    font-size: 20px;
+  }
+  
+  .main-content {
+    padding: 0;
+  }
+  
+  .user-info span {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .ai-scanner-container {
+    bottom: 15px;
+    right: 15px;
+  }
+  
+  .ai-button {
+    width: 55px;
+    height: 55px;
+    font-size: 16px;
+  }
+  
+  .pulse-ring {
+    width: 65px;
+    height: 65px;
+  }
+}
+
+/* Modal responsive height - auto fits content */
+.modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@media (max-height: 600px) {
+  .bg-white.w-\[500px\] {
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}

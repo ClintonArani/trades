@@ -1,0 +1,154 @@
+<div class="frequency-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <h1>📊 Real-Time Digit Frequency Analysis</h1>
+      <p>Live digit frequency tracking with animated updates</p>
+    </div>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="market-card">
+    <div class="market-controls">
+      <div class="control-group">
+        <label>Market:</label>
+        <select [(ngModel)]="selectedMarket" (change)="resetAnalysis()">
+          <option *ngFor="let market of markets" [value]="market">{{ market }}</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label>Speed:</label>
+        <select (change)="changeSpeed($any($event.target).value)">
+          <option *ngFor="let option of speedOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="action-buttons">
+        <button (click)="toggleRunning()" [class]="isRunning ? 'btn-pause' : 'btn-start'">
+          {{ isRunning ? '⏸️ Pause' : '▶️ Start' }}
+        </button>
+        <button (click)="resetAnalysis()" class="btn-reset">
+          🔄 Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Status -->
+  <div class="status-card">
+    <div class="status-indicator">
+      <span class="status-dot" [class.paused]="!isRunning"></span>
+      <span>{{ isRunning ? 'LIVE STREAMING' : 'PAUSED' }}</span>
+    </div>
+    <div class="status-stats">
+      <span>🕐 Last Update: {{ formatTime() }}</span>
+      <span>📈 Total Ticks: {{ totalTicks }}</span>
+    </div>
+  </div>
+
+  <!-- Current Price Display -->
+  <div class="price-card" [class]="priceChangeClass">
+    <div class="price-label">Current Price</div>
+    <div class="price-value">{{ currentPrice }}</div>
+    <div class="price-digit">Last Digit: <strong class="last-digit">{{ lastDigit }}</strong></div>
+  </div>
+
+  <!-- Live Frequency Circles -->
+  <div class="viz-card">
+    <div class="viz-header">
+      <h2>🎯 Live Digit Frequency</h2>
+      <div class="live-badge">
+        <span class="pulse-dot"></span>
+        UPDATING LIVE
+      </div>
+    </div>
+
+    <div class="circle-grid">
+      <div *ngFor="let digit of digits; let i = index" class="circle-item">
+        <div class="circle-wrapper" [class.updating]="isUpdating(digit)">
+          <div class="circle-progress">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+              <circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                [attr.stroke]="'url(#grad' + i + ')'"
+                stroke-width="8"
+                stroke-linecap="round"
+                [attr.stroke-dasharray]="circleCircumference"
+                [attr.stroke-dashoffset]="getStrokeDashoffset(digit)"
+                class="progress-circle"
+              />
+            </svg>
+            <div class="circle-label">
+              <span class="digit">{{ digit }}</span>
+            </div>
+          </div>
+          <div class="circle-stats">
+            <div class="percentage">{{ getPercentageString(digit) }}%</div>
+            <div class="count">{{ getCount(digit) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bar Chart -->
+  <div class="bar-card">
+    <div class="viz-header">
+      <h2>📊 Frequency Distribution</h2>
+    </div>
+    <div class="bars-container">
+      <div *ngFor="let digit of digits" class="bar-row">
+        <div class="bar-digit">{{ digit }}</div>
+        <div class="bar-track">
+          <div 
+            class="bar-fill"
+            [style.width.%]="getPercentage(digit)"
+            [style.background]="'linear-gradient(90deg, ' + getGradientColor(digit, 0) + ', ' + getGradientColor(digit, 1) + ')'"
+          >
+            <span class="bar-percentage">{{ getPercentageString(digit) }}%</span>
+          </div>
+        </div>
+        <div class="bar-count">{{ getCount(digit) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-header">📈 Most Frequent</div>
+      <div class="stat-value large">{{ mostFrequentDigit }}</div>
+      <div class="stat-sub">{{ maxFrequency }}% occurrence</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">📉 Least Frequent</div>
+      <div class="stat-value large">{{ leastFrequentDigit }}</div>
+      <div class="stat-sub">{{ minFrequency }}% occurrence</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">📐 Variance</div>
+      <div class="stat-value">{{ variance }}%</div>
+      <div class="stat-sub">From uniform distribution</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-header">⚖️ Chi-Square</div>
+      <div class="stat-value">{{ expectedValue }}</div>
+      <div class="stat-sub">Lower = more uniform</div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    ⚠️ Each tick updates the frequency in REAL-TIME. Watch the circles and bars animate as new digits arrive!
+  </div>
+</div>

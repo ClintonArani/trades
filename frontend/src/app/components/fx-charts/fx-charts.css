@@ -1,0 +1,385 @@
+.charts-container {
+  background: #111827;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.tool-icon-group {
+  position: relative;
+}
+
+.tooltip-left {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 10px;
+  background-color: #1f2937;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 100;
+  font-family: monospace;
+}
+
+.tool-icon-group:hover .tooltip-left {
+  opacity: 1;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Canvas styles */
+canvas {
+  display: block;
+  outline: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tooltip-left {
+    display: none;
+  }
+  
+  .w-16 {
+    width: 48px;
+  }
+}
+
+.bot-builder-container {
+  height: calc(100vh - 120px);
+  min-height: 500px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Hide all scrollbars */
+.bot-builder-container::-webkit-scrollbar,
+.deriv-bg::-webkit-scrollbar,
+.p-4::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.bot-builder-container,
+.deriv-bg,
+.overflow-y-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tool-icon-group {
+  position: relative;
+}
+
+.tool-icon-group .tooltip {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1f2937;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
+  font-family: monospace;
+}
+
+.tool-icon-group .tooltip-right {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
+  background-color: #1f2937;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.tool-icon-group:hover .tooltip,
+.tool-icon-group:hover .tooltip-right {
+  opacity: 1;
+}
+
+/* Custom scrollbar - hidden */
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-track {
+  display: none;
+}
+
+::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+/* Smooth transitions */
+* {
+  transition: all 0.2s ease;
+}
+
+/* Canvas zoom animation */
+.canvas-zoom {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modal animations */
+.modal-enter {
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Journal entry styles */
+.journal-entry {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Loading animation */
+.loading-spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .bot-builder-container {
+    height: calc(100vh - 100px);
+  }
+  
+  .tool-icon-group .tooltip,
+  .tool-icon-group .tooltip-right {
+    display: none;
+  }
+}
+
+.deriv-bg {
+  background: #f2f3f5;
+}
+
+/* Panel */
+.deriv-panel {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+/* Header */
+.deriv-header {
+  background: #0e4a5a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+/* Body */
+.deriv-body {
+  padding: 10px 12px;
+}
+
+/* Row */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Label */
+.label {
+  font-size: 12px;
+  color: #333;
+}
+
+/* Select */
+.select {
+  background: #f7f7f7;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  min-width: 120px;
+  max-width: 100%;
+}
+
+.select.small {
+  min-width: 80px;
+}
+
+/* Input */
+.input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  width: 60px;
+}
+
+/* Checkbox */
+.checkbox-row {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+/* Mini header */
+.mini-header {
+  background: #0e4a5a;
+  color: white;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Trade box */
+.trade-box {
+  background: #f5f5f5;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+/* Slider placeholder */
+.fake-slider {
+  height: 40px;
+  background: #e0e0e0;
+  border-radius: 6px;
+}
+
+/* Muted */
+.muted {
+  color: #777;
+}
+
+/* Modal slide-in animation */
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-slide-in {
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+.blocks-menu-header {
+  background: #e6e6e6;
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.blocks-menu-header:hover {
+  background: #dcdcdc;
+}
+
+/* Hide scrollbar for all overflow containers */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

@@ -1,0 +1,182 @@
+<div class="charts-container min-h-screen bg-gray-900">
+  <!-- Main Container -->
+  <div class="flex h-screen">
+    
+    <!-- LEFT TOOLBAR -->
+    <div class="w-16 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-4 gap-3">
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="setChartType('line')" [class.bg-blue-500]="chartType === 'line'">
+          <i class="fa-solid fa-chart-line text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Line Chart</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="setChartType('candlestick')" [class.bg-blue-500]="chartType === 'candlestick'">
+          <i class="fa-solid fa-chart-simple text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Candlestick</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="toggleDrawingTool('trendline')" [class.bg-blue-500]="activeDrawingTool === 'trendline'">
+          <i class="fa-solid fa-chart-line text-gray-400 text-lg fa-flip-horizontal"></i>
+        </div>
+        <div class="tooltip-left">Trend Line</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="toggleDrawingTool('horizontal')" [class.bg-blue-500]="activeDrawingTool === 'horizontal'">
+          <i class="fa-solid fa-grip-lines text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Horizontal Line</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="addFibonacci()" [class.bg-blue-500]="showFibonacci">
+          <i class="fa-solid fa-chart-simple text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Fibonacci</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="toggleGrid()">
+          <i class="fa-solid fa-table-cells text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Toggle Grid</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="zoomIn()">
+          <i class="fa-solid fa-magnifying-glass-plus text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Zoom In</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="zoomOut()">
+          <i class="fa-solid fa-magnifying-glass-minus text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Zoom Out</div>
+      </div>
+      <div class="tool-icon-group relative">
+        <div class="p-2 rounded-lg hover:bg-gray-700 cursor-pointer transition" (click)="resetChart()">
+          <i class="fa-solid fa-arrows-rotate text-gray-400 text-lg"></i>
+        </div>
+        <div class="tooltip-left">Reset</div>
+      </div>
+    </div>
+
+    <!-- MAIN CHART AREA -->
+    <div class="flex-1 flex flex-col">
+      <!-- TOP BAR -->
+      <div class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
+        <!-- Market Dropdown -->
+        <div class="relative">
+          <button (click)="toggleMarketDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-700 transition text-white font-semibold text-sm">
+            <i class="fa-solid fa-chart-line text-emerald-500"></i>
+            {{ selectedMarket.name }}
+            <i class="fa-solid fa-chevron-down text-xs" [class.rotate-180]="showMarketDropdown"></i>
+          </button>
+          
+          <!-- DROPDOWN POPUP -->
+          <div *ngIf="showMarketDropdown" class="absolute top-10 left-0 w-[450px] bg-gray-800 rounded-xl shadow-2xl z-50 flex overflow-hidden border border-gray-700">
+            <!-- LEFT MENU -->
+            <div class="w-[35%] bg-gray-900 p-3 border-r border-gray-700">
+              <p class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-3">Markets</p>
+              <div class="space-y-1">
+                <div *ngFor="let category of marketCategories" 
+                     (click)="selectMarketCategory(category)" 
+                     class="px-2 py-1.5 rounded-lg text-xs cursor-pointer transition"
+                     [class.bg-emerald-600]="selectedCategory === category.name"
+                     [class.text-white]="selectedCategory === category.name"
+                     [class.text-gray-300]="selectedCategory !== category.name"
+                     [class.hover:bg-gray-700]="selectedCategory !== category.name">
+                  {{ category.name }}
+                </div>
+              </div>
+            </div>
+            
+            <!-- RIGHT LIST -->
+            <div class="w-[65%] p-3">
+              <div class="text-xs font-semibold text-gray-400 uppercase mb-2">{{ selectedCategory }}</div>
+              <div class="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+                <div *ngFor="let market of filteredMarkets" 
+                     (click)="selectMarket(market)"
+                     class="flex items-center justify-between px-2 py-2 hover:bg-gray-700 rounded-lg cursor-pointer transition group">
+                  <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-emerald-600/20 flex items-center justify-center">
+                      <i class="fa-solid fa-chart-line text-emerald-500 text-[8px]"></i>
+                    </div>
+                    <span class="text-sm text-white">{{ market.name }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono text-gray-400">{{ market.symbol }}</span>
+                    <span class="text-xs" [class.text-green-400]="market.change >= 0" [class.text-red-400]="market.change < 0">
+                      {{ market.change >= 0 ? '+' : '' }}{{ market.change }}%
+                    </span>
+                    <i class="fa-regular fa-star text-gray-500 opacity-0 group-hover:opacity-100 transition"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Price Info -->
+        <div class="text-right">
+          <div class="flex items-center gap-3">
+            <div>
+              <div class="text-2xl font-bold text-white" [class.text-green-400]="priceChange >= 0" [class.text-red-400]="priceChange < 0">
+                {{ currentPrice | number:'1.2-2' }}
+              </div>
+              <div class="text-xs" [class.text-green-400]="priceChange >= 0" [class.text-red-400]="priceChange < 0">
+                {{ priceChange >= 0 ? '+' : '' }}{{ priceChange | number:'1.2-2' }} ({{ priceChangePercent | number:'1.2-2' }}%)
+              </div>
+            </div>
+            <div class="w-px h-8 bg-gray-700"></div>
+            <div>
+              <div class="text-xs text-gray-400">Volatility</div>
+              <div class="text-sm font-mono text-white">{{ selectedMarket.volatility || 25 }}%</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- TradingView Button -->
+        <button (click)="toggleTradingView()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2">
+          <i class="fa-brands fa-tradingview"></i>
+          TradingView
+        </button>
+      </div>
+      
+      <!-- CHART CANVAS -->
+      <div class="flex-1 relative bg-gray-900" 
+           (mousemove)="onChartHover($event)" 
+           (mouseleave)="hoverData = null"
+           (click)="onChartClick($event)">
+        <canvas #chartCanvas class="w-full h-full cursor-crosshair"></canvas>
+        
+        <!-- Hover Tooltip -->
+        <div *ngIf="hoverData" class="absolute bg-black/90 text-white text-xs rounded-lg px-3 py-2 pointer-events-none z-20 shadow-xl border border-gray-600" 
+             [style.left.px]="hoverData.x + 15" [style.top.px]="hoverData.y - 50">
+          <div class="font-mono text-emerald-400">{{ hoverData.price | number:'1.2-2' }}</div>
+          <div class="text-gray-300 text-[9px]">Time: {{ hoverData.time }}</div>
+          <div class="text-gray-300 text-[9px]" *ngIf="hoverData.open">O: {{ hoverData.open | number:'1.2-2' }}</div>
+          <div class="text-gray-300 text-[9px]" *ngIf="hoverData.high">H: {{ hoverData.high | number:'1.2-2' }}</div>
+          <div class="text-gray-300 text-[9px]" *ngIf="hoverData.low">L: {{ hoverData.low | number:'1.2-2' }}</div>
+          <div class="text-gray-300 text-[9px]" *ngIf="hoverData.close">C: {{ hoverData.close | number:'1.2-2' }}</div>
+          <div class="text-gray-400 text-[8px] mt-1">Vol: {{ hoverData.volume }}</div>
+        </div>
+        
+        <!-- Drawing Tool Indicator -->
+        <div *ngIf="activeDrawingTool !== 'cursor'" class="absolute bottom-2 left-2 bg-black/60 rounded px-2 py-1 text-[10px] text-white">
+          Drawing: {{ activeDrawingTool | titlecase }} mode (Click on chart)
+        </div>
+        
+        <!-- Fibonacci Indicator -->
+        <div *ngIf="showFibonacci && fibLevels.length > 0" class="absolute bottom-2 right-2 bg-black/60 rounded px-2 py-1 text-[10px] text-white">
+          Fibonacci Levels: {{ fibLevels[0] }} - {{ fibLevels[fibLevels.length-1] }}
+        </div>
+      </div>
+      
+      <!-- BOTTOM AXIS -->
+      <div class="bg-gray-800 border-t border-gray-700 px-4 py-1 text-[9px] text-gray-500 font-mono flex justify-between">
+        <span>15:19:40</span><span>15:19:50</span><span>15:20:00</span><span>15:20:10</span><span>15:20:20</span>
+        <span>15:20:30</span><span>15:20:40</span><span>15:20:50</span><span>15:21:00</span><span>15:21:10</span>
+      </div>
+    </div>
+  </div>
+</div>

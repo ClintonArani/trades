@@ -1,0 +1,34 @@
+<!-- Attempt iframe first -->
+<div *ngIf="!iframeError" class="iframe-wrapper">
+  <div class="iframe-container">
+    <iframe 
+      [src]="safeUrl" 
+      class="charts-iframe"
+      frameborder="0"
+      (error)="onIframeError()"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen>
+    </iframe>
+  </div>
+</div>
+
+<!-- Fallback UI if embedding is blocked -->
+<div *ngIf="iframeError" class="fallback-container">
+  <div class="info-card">
+    <h2>📈 Advanced Trading Charts</h2>
+    <p>Deriv's professional charting platform uses security settings that prevent it from being embedded directly into other websites.</p>
+    <p>Click the button below to open the full TradingView-powered charts in a new tab.</p>
+    <button (click)="openInNewTab()" class="btn-open-charts">
+      Open Advanced Charts →
+    </button>
+    <div class="chart-preview">
+      <p>🔍 Available features:</p>
+      <ul>
+        <li>50+ technical indicators</li>
+        <li>Multiple timeframes (1 minute to 1 month)</li>
+        <li>Drawing tools & trendlines</li>
+        <li>Synthetic indices & real markets</li>
+      </ul>
+    </div>
+  </div>
+</div>

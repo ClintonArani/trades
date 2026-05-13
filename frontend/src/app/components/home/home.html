@@ -1,0 +1,122 @@
+<div class="app-container">
+  <!-- Sticky Header -->
+  <header class="sticky-header">
+    <div class="header-top">
+      <div class="logo flex items-center gap-2">
+        <img src="assets/logo.png" alt="" class="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 lg:h-16 lg:w-16 rounded-md">
+        <h1 class="text-lg sm:text-xl md:text-2xl lg:text-3xl">WiseTrade</h1>
+      </div>
+      <div class="auth-buttons flex gap-2 sm:gap-3">
+        <!-- Show Sign Up/Sign In when NOT authenticated -->
+        <ng-container *ngIf="!isAuthenticated">
+          <button class="btn-signup px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm" (click)="signUpWithDeriv()">Sign Up</button>
+          <button class="btn-signin px-4 py-1.5 sm:px-6 sm:py-2 text-xs sm:text-sm" (click)="signInWithDeriv()">Sign In</button>
+        </ng-container>
+        
+        <!-- Show User Info and Logout when authenticated -->
+        <ng-container *ngIf="isAuthenticated">
+          <div class="user-info flex items-center gap-2 sm:gap-3">
+            <span class="user-email text-xs sm:text-sm">👤 {{ userEmail }}</span>
+            <button class="btn-logout px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm" (click)="logout()">Sign Out</button>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- Navigation Bar - Horizontal scroll with invisible scrollbar -->
+    <nav class="navbar">
+      <div class="nav-container">
+        <a 
+          *ngFor="let navItem of navItems" 
+          [routerLink]="navItem.path"
+          routerLinkActive="active"
+          class="nav-link"
+        >
+          <span class="nav-icon text-base sm:text-lg">{{ navItem.icon }}</span>
+          <span class="nav-label hidden sm:inline text-sm">{{ navItem.label }}</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+  
+  <!-- Main Content Area - Dynamic height, no scroll -->
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <!-- ================= AI SCANNER MODAL ================= -->
+  <div
+    *ngIf="isAiScannerVisible"
+    class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-fadeIn p-4"
+    (click)="closeAiScanner($event)"
+  >
+    <div class="bg-white w-[500px] max-w-full rounded-xl shadow-xl p-6 relative animate-slide-up max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Entry Scanner</h2>
+        <button (click)="closeAiScanner()" class="text-gray-400 hover:text-gray-600 transition-colors text-2xl leading-none">
+          ×
+        </button>
+      </div>
+      <div class="bg-gray-100 text-sm p-3 rounded mb-4 text-gray-600">
+        Deep scanner evaluates all synthetic index random markets, then finds the best entry point
+        digit and strategy profile from historical tick data.
+      </div>
+      <label class="text-sm font-medium">NUMBER OF TICKS TO SCAN</label>
+      <input 
+        type="number" 
+        [(ngModel)]="ticks" 
+        [disabled]="isScanning"
+        class="w-full border rounded p-2 mt-1 mb-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+      />
+      <div class="text-sm text-gray-500 mb-1">
+        Scanning market... <span class="float-right">{{ scannedMarkets }}/{{ totalMarkets }}</span>
+      </div>
+      <div class="w-full bg-gray-200 h-2 rounded mb-3 overflow-hidden">
+        <div 
+          class="bg-blue-500 h-2 rounded transition-all duration-300 ease-out" 
+          [style.width.%]="scanProgress"
+        ></div>
+      </div>
+      <div class="bg-gray-100 p-2 rounded text-sm text-gray-500 mb-4 min-h-[60px]">
+        {{ scanStatus }}
+      </div>
+      <button 
+        (click)="deepScanMarket()" 
+        [disabled]="isScanning"
+        class="w-full py-2 rounded text-white mb-3 scan-btn transition-all duration-300"
+        [class]="isScanning ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:scale-105'"
+      >
+        Deep Scan for Best Market
+      </button>
+      <button 
+        (click)="loadDeepScannerBot()" 
+        [disabled]="scannedBots.length === 0"
+        class="w-full py-2 rounded border transition-all duration-300"
+        [class]="scannedBots.length === 0 ? 'border-gray-300 text-gray-400 cursor-not-allowed' : 'border-blue-500 text-blue-500 hover:bg-blue-50 hover:scale-105'"
+      >
+        Load Deep Scanner Bot
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= AI SCANNER FLOATING BUTTON ================= -->
+  <div class="ai-scanner-container" (click)="openAiScanner()">
+    <!-- Pulse Rings -->
+    <div class="pulse-ring delay-0"></div>
+    <div class="pulse-ring delay-1"></div>
+    <div class="pulse-ring delay-2"></div>
+    <div class="pulse-ring delay-3"></div>
+    
+    <!-- Main AI Button -->
+    <div class="ai-button">
+      <div class="rotating-arm"></div>
+      <span class="ai-text">AI</span>
+    </div>
+    
+    <!-- Tooltip -->
+    <div class="ai-tooltip">
+      🤖 AI Entry Scanner<br>
+      <span class="text-xs text-gray-300">Click to scan markets</span>
+    </div>
+  </div>
+</div>
