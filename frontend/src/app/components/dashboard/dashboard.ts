@@ -11,10 +11,15 @@ export class Dashboard {
   safeUrl: SafeResourceUrl;
   
   constructor(private sanitizer: DomSanitizer) {
-    // Sanitize the URL to bypass Angular's security for iframes
-    // The #dashboard hash fragment tells Deriv Bot to show its dashboard view
+    // Correct URL - no invalid query parameters
+    // Deriv Bot only accepts the base URL with hash routing
     this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
-      'https://bot.deriv.com/#dashboard'
+      'https://bot.deriv.com'
     );
+    
+    // If you need the dashboard view specifically:
+    // this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+    //   'https://bot.deriv.com/#dashboard'
+    // );
   }
 }
