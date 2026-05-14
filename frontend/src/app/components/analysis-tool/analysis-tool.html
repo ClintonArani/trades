@@ -1,1 +1,171 @@
-<p>analysis-tool works!</p>
+<!-- analysis-tool.html -->
+<div class="analysis-tool">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>ANALYSIS</h2>
+    </div>
+
+    <!-- Tab Navigation as Sidebar Menu -->
+    <div class="sidebar-menu">
+      <button class="menu-item" [class.active]="activeTab === 'evenodd'" (click)="setActiveTab('evenodd')">
+        Even/odd
+      </button>
+      <button class="menu-item" [class.active]="activeTab === 'overunder'" (click)="setActiveTab('overunder')">
+        Over/under
+      </button>
+      <button class="menu-item" [class.active]="activeTab === 'matchdiffer'" (click)="setActiveTab('matchdiffer')">
+        Match/differ
+      </button>
+      <button class="menu-item" [class.active]="activeTab === 'risefall'" (click)="setActiveTab('risefall')">
+        Rise/fall
+      </button>
+    </div>
+
+    <!-- Volatility Index Dropdown -->
+    <div class="sidebar-section">
+      <div class="section-label">Volatility Index</div>
+      <div class="custom-dropdown" (click)="toggleDropdown()">
+        <div class="dropdown-selected">
+          {{ selectedVolatility }}
+          <span class="dropdown-arrow">▼</span>
+        </div>
+        <div class="dropdown-menu" *ngIf="isDropdownOpen">
+          <div *ngFor="let vol of volatilityList" class="dropdown-item" (click)="selectVolatility(vol); $event.stopPropagation()">
+            {{ vol }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Number of Digits -->
+    <div class="sidebar-section">
+      <div class="section-label">Number of Digits</div>
+      <div class="digit-control">
+        <button class="digit-btn" (click)="decrementDigits()">-</button>
+        <span class="digit-value">{{ numberOfDigits }}</span>
+        <button class="digit-btn" (click)="incrementDigits()">+</button>
+      </div>
+    </div>
+
+    <!-- Bot Analysis Tool and Deriv Hub Tool Labels -->
+    <div class="sidebar-footer">
+      <div class="footer-text">Bot Analysis Tool</div>
+      <div class="footer-text">Deriv Hub Tool</div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="main-content">
+    <!-- Current Price Display with Live Ticker -->
+    <div class="price-card">
+      <div class="price-label">CURRENT PRICE</div>
+      <div class="price-value" [class.price-up]="lastDirection === 'up'" [class.price-down]="lastDirection === 'down'">
+        {{ currentPrice | number:'1.3-3' }}
+      </div>
+      <div class="price-digits">{{ priceDigits }}</div>
+      <div class="live-badge">● LIVE</div>
+    </div>
+
+    <!-- Tab Content: Even/Odd -->
+    <div *ngIf="activeTab === 'evenodd'" class="tab-content">
+      <div class="analysis-title">Digit Distribution</div>
+      <div class="chart-container">
+        <div class="chart-bars">
+          <div *ngFor="let digit of digits; let i = index" class="bar-item">
+            <div class="bar-wrapper">
+              <div class="bar-fill" [style.height.%]="getLiveDigitPercentage(i)"></div>
+            </div>
+            <div class="bar-label">{{ i }}</div>
+            <div class="bar-value">{{ getLiveDigitPercentage(i).toFixed(2) }}%</div>
+          </div>
+        </div>
+      </div>
+      <div class="percentage-summary">
+        <span class="even-text">Even: {{ getLiveEvenPercentage().toFixed(2) }}%</span>
+        <span class="odd-text">Odd: {{ getLiveOddPercentage().toFixed(2) }}%</span>
+      </div>
+      <div class="prediction-box">
+        <span class="prediction-label">Next Prediction:</span>
+        <span class="prediction-value" [class]="nextEvenOddPrediction">{{ nextEvenOddPrediction }}</span>
+      </div>
+    </div>
+
+    <!-- Tab Content: Over/Under -->
+    <div *ngIf="activeTab === 'overunder'" class="tab-content">
+      <div class="analysis-title">Over/Under Analysis</div>
+      <div class="dual-chart">
+        <div class="chart-section">
+          <div class="chart-section-title">Over</div>
+          <div class="chart-bars">
+            <div *ngFor="let digit of digits; let i = index" class="bar-item">
+              <div class="bar-wrapper">
+                <div class="bar-fill over-fill" [style.height.%]="getLiveOverPercentage(i)"></div>
+              </div>
+              <div class="bar-label">{{ i }}</div>
+              <div class="bar-value">{{ getLiveOverPercentage(i).toFixed(2) }}%</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-section">
+          <div class="chart-section-title">Under</div>
+          <div class="chart-bars">
+            <div *ngFor="let digit of digits; let i = index" class="bar-item">
+              <div class="bar-wrapper">
+                <div class="bar-fill under-fill" [style.height.%]="getLiveUnderPercentage(i)"></div>
+              </div>
+              <div class="bar-label">{{ i }}</div>
+              <div class="bar-value">{{ getLiveUnderPercentage(i).toFixed(2) }}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="prediction-box">
+        <span class="prediction-label">Next Prediction:</span>
+        <span class="prediction-value">{{ nextOverUnderPrediction }}</span>
+      </div>
+    </div>
+
+    <!-- Tab Content: Match/Differ -->
+    <div *ngIf="activeTab === 'matchdiffer'" class="tab-content">
+      <div class="analysis-title">Differs From Analysis</div>
+      <div class="matchdiffer-stats">
+        <div class="stats-grid">
+          <div *ngFor="let digit of digits; let i = index" class="stat-card">
+            <div class="stat-digit">{{ i }}</div>
+            <div class="stat-bar-wrapper">
+              <div class="stat-bar" [style.width.%]="getLiveMatchDifferPercentage(i)"></div>
+            </div>
+            <div class="stat-percent">{{ getLiveMatchDifferPercentage(i).toFixed(2) }}%</div>
+          </div>
+        </div>
+      </div>
+      <div class="prediction-box">
+        <span class="prediction-label">Next Prediction:</span>
+        <span class="prediction-value">{{ nextMatchDifferPrediction }}</span>
+      </div>
+    </div>
+
+    <!-- Tab Content: Rise/Fall -->
+    <div *ngIf="activeTab === 'risefall'" class="tab-content">
+      <div class="analysis-title">Rise Pattern Distribution</div>
+      <div class="risefall-container">
+        <div class="percentage-display">
+          <div class="rise-percent">R Percentage: {{ getLiveRisePercentage().toFixed(2) }}%</div>
+          <div class="fall-percent">F Percentage: {{ getLiveFallPercentage().toFixed(2) }}%</div>
+        </div>
+      </div>
+      <div class="prediction-box">
+        <span class="prediction-label">Next Prediction:</span>
+        <span class="prediction-value" [class]="nextRiseFallPrediction === 'RISE' ? 'rise-value' : 'fall-value'">
+          {{ nextRiseFallPrediction }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Risk Disclaimer -->
+    <div class="risk-disclaimer">
+      Risk Disclaimer
+    </div>
+  </div>
+</div>
