@@ -5,29 +5,42 @@ import { environment } from '../../environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // ✅ Using environment variable for API URL
   private API_URL = environment.apiUrl;
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  private accessTokenSubject = new BehaviorSubject<string | null>(null);
+  public accessToken$ = this.accessTokenSubject.asObservable(); // ✅ Make this public
   
   constructor(private http: HttpClient) {
-    console.log('AuthService initialized with API_URL:', this.API_URL); // Helpful for debugging
+    console.log('AuthService initialized with API_URL:', this.API_URL);
     this.checkAuthStatus();
-    // Check auth status every 5 minutes (reduced from 1 minute to save API calls)
     interval(300000).subscribe(() => this.checkAuthStatus());
   }
 
-  // Login redirects to Deriv OAuth page
   login(): void {
     window.location.href = `${this.API_URL}/api/auth/login`;
   }
 
   checkAuthStatus(): void {
-    this.http.get<{ authenticated: boolean }>(`${this.API_URL}/api/auth/user`, { withCredentials: true })
+    this.http.get<{ authenticated: boolean; token?: string }>(`${this.API_URL}/api/auth/user`, { withCredentials: true })
       .subscribe({
-        next: (response) => this.isAuthenticatedSubject.next(response.authenticated),
-        error: () => this.isAuthenticatedSubject.next(false)
+        next: (response) => {
+          this.isAuthenticatedSubject.next(response.authenticated);
+          if (response.authenticated && response.token) {
+            this.accessTokenSubject.next(response.token);
+          } else {
+            this.accessTokenSubject.next(null);
+          }
+        },
+        error: () => {
+          this.isAuthenticatedSubject.next(false);
+          this.accessTokenSubject.next(null);
+        }
       });
+  }
+
+  getAccessToken(): Observable<string | null> {
+    return this.accessToken$; // ✅ Return the observable directly
   }
 
   logout(): Observable<any> {

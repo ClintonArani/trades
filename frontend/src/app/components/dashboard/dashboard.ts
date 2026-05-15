@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -7,19 +8,26 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
-export class Dashboard {
+export class Dashboard implements OnInit {
   safeUrl: SafeResourceUrl;
   
-  constructor(private sanitizer: DomSanitizer) {
-    // Correct URL - no invalid query parameters
-    // Deriv Bot only accepts the base URL with hash routing
-    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
-      'https://bot.deriv.com'
-    );
-    
-    // If you need the dashboard view specifically:
-    // this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
-    //   'https://bot.deriv.com/#dashboard'
-    // );
+  constructor(
+    private sanitizer: DomSanitizer,
+    private authService: AuthService
+  ) {
+    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl('https://bot.deriv.com');
+  }
+
+  ngOnInit() {
+    this.authService.getAccessToken().subscribe(token => {
+      if (token) {
+        this.updateIframeWithToken(token);
+      }
+    });
+  }
+
+  private updateIframeWithToken(token: string) {
+    const url = `https://bot.deriv.com/#dashboard?token=${token}`;
+    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 }
