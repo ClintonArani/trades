@@ -12,6 +12,8 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./home.css']
 })
 export class Home implements OnInit {
+  isMobileMenuOpen: boolean = false;
+
   navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/bot-builder', label: 'Bot Builder', icon: '🤖' },
@@ -158,5 +160,20 @@ export class Home implements OnInit {
   
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+    // Mobile menu methods
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    if (this.isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }
+
+  closeMobileMenu(): void {
+    this.isMobileMenuOpen = false;
+    document.body.style.overflow = '';
   }
 }

@@ -8,7 +8,7 @@
 .iframe-container {
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
+  background: #0e0e0e;
   overflow: auto;
   position: relative;
 }
@@ -23,80 +23,120 @@
 
 /* === VISUAL OVERLAY TECHNIQUE === */
 /* This covers the Deriv Bot's navbar, sidebar, and login button visually */
-/* Adjust the pixel values based on what you see in the iframe */
 
-/* Cover the top navigation bar */
+/* Cover the top navigation bar - LARGE SCREEN DEFAULT */
 .iframe-container::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 60px; /* Increase if navbar is still visible */
+  height: 60px;
   background: #ffffff;
-  z-index: 9999;
-  pointer-events: none; /* Allows clicking through to iframe content below */
+  z-index: 999;
+  pointer-events: none;
 }
 
-/* Cover the left sidebar */
+/* Cover the left sidebar - LARGE SCREEN DEFAULT */
 .iframe-container::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 80px; /* Increase if sidebar is still visible */
+  width: 80px;
   background: #ffffff;
   z-index: 9999;
   pointer-events: none;
 }
 
-/* If the login button is in a different position, cover it specifically */
-/* You can add more overlay elements if needed */
-
-/* Optional: Cover the right-side login area */
-.iframe-container .login-cover {
-  display: none;
-}
-
-/* You can add this extra div in your HTML if needed, but ::before/::after should suffice */
-
-/* For more precise control - uncomment and adjust position */
-/*
-.iframe-container {
-  position: relative;
-}
-
-.iframe-container .navbar-cover {
+/* Cover the bottom navigation bar - NEW */
+.iframe-container .bottom-cover {
+  content: '';
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
   height: 60px;
-  background: #0e0e0e;
+  background: #ffffff;
   z-index: 9999;
   pointer-events: none;
 }
 
-.iframe-container .sidebar-cover {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 280px;
-  background: #0e0e0e;
-  z-index: 9999;
-  pointer-events: none;
-}
-*/
+/* Alternative: Use a new pseudo-element if you can't add a div */
+/* Since ::before and ::after are already used, we need to add a new element in HTML */
+/* For now, add this style for a third overlay - we'll need to modify HTML */
 
-/* Responsive adjustment for mobile */
+/* === RESPONSIVE ADJUSTMENTS - ONLY FOR SMALLER SCREENS === */
+
+/* Tablets and smaller (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .iframe-container::before {
+    height: 55px;
+  }
+  
+  .iframe-container::after {
+    width: 10px;
+  }
+  
+  .bottom-cover {
+    height: 55px;
+  }
+}
+
+/* Mobile devices (max-width: 768px) */
 @media (max-width: 768px) {
   .iframe-wrapper {
     height: calc(100vh - 120px);
   }
   
+  .iframe-container::before {
+    height: 40px;
+  }
+  
   .iframe-container::after {
-    width: 200px; /* Smaller sidebar on mobile */
+    width: 10px;
+  }
+  
+  .bottom-cover {
+    height: 50px;
+  }
+}
+
+/* Small mobile devices (max-width: 480px) */
+@media (max-width: 480px) {
+  .iframe-wrapper {
+    height: calc(100vh - 100px);
+  }
+  
+  .iframe-container::before {
+    height: 45px;
+  }
+  
+  .iframe-container::after {
+    width: 10px;
+  }
+  
+  .bottom-cover {
+    height: 45px;
+  }
+}
+
+/* Very small devices (max-width: 360px) */
+@media (max-width: 360px) {
+  .iframe-wrapper {
+    height: calc(100vh - 90px);
+  }
+  
+  .iframe-container::before {
+    height: 40px;
+  }
+  
+  .iframe-container::after {
+    width: 10px;
+  }
+  
+  .bottom-cover {
+    height: 40px;
   }
 }
