@@ -91,7 +91,7 @@
   }
   
   .iframe-container::before {
-    height: 40px;
+    height: 50px;
   }
   
   .iframe-container::after {
@@ -110,7 +110,7 @@
   }
   
   .iframe-container::before {
-    height: 45px;
+    height: 50px;
   }
   
   .iframe-container::after {
@@ -118,7 +118,7 @@
   }
   
   .bottom-cover {
-    height: 45px;
+    height: 50px;
   }
 }
 
@@ -129,7 +129,7 @@
   }
   
   .iframe-container::before {
-    height: 40px;
+    height: 50px;
   }
   
   .iframe-container::after {
