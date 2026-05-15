@@ -186,7 +186,8 @@ export async function getUserInfo(req, res) {
     res.json({ 
       authenticated: true, 
       user: response.data,
-      email: response.data?.email
+      email: response.data?.email,
+      token: token  // ✅ Return the token to frontend
     });
   } catch (error) {
     console.error('Get user info failed:', error.response?.data || error.message);
