@@ -9,7 +9,7 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, NgFor, NgIf, FormsModule],
   templateUrl: './home.html',
-  styleUrls: ['./home.css']
+  styleUrls: ['./home.css'],
 })
 export class Home implements OnInit {
   isMobileMenuOpen: boolean = false;
@@ -42,14 +42,25 @@ export class Home implements OnInit {
   constructor(public authService: AuthService) {}
 
   ngOnInit(): void {
-    this.authService.isAuthenticated$.subscribe(isAuth => {
+    console.log('Home component initialized');
+
+    this.authService.isAuthenticated$.subscribe((isAuth) => {
+      console.log('Auth state changed:', isAuth);
       this.isAuthenticated = isAuth;
       if (isAuth) {
+        console.log('User is authenticated, fetching user info...');
         this.authService.getUserInfo().subscribe({
-          next: (data) => this.userEmail = data.user?.email || 'User'
+          next: (data) => {
+            console.log('User info received:', data);
+            this.userEmail = data.user?.email || 'User';
+          },
+          error: (err) => console.error('Error fetching user info:', err),
         });
       }
     });
+
+    // Force a check on component load
+    this.authService.checkAuthStatus();
   }
 
   signInWithDeriv(): void {
@@ -81,12 +92,12 @@ export class Home implements OnInit {
 
   async deepScanMarket(): Promise<void> {
     if (this.isScanning) return;
-    
+
     this.isScanning = true;
     this.scanStatus = 'Initializing scanner...';
     this.scanProgress = 0;
     this.scannedMarkets = 0;
-    
+
     // Simulate scanning through markets
     for (let i = 1; i <= this.totalMarkets; i++) {
       await this.delay(250);
@@ -94,20 +105,20 @@ export class Home implements OnInit {
       this.scanProgress = (i / this.totalMarkets) * 100;
       this.scanStatus = `Scanning market ${i}/${this.totalMarkets}...`;
     }
-    
+
     // Simulate analyzing tick data
     await this.delay(500);
     this.scanStatus = 'Analyzing tick data patterns...';
     await this.delay(500);
-    
+
     // Generate mock scan results
     const markets = ['R_10', 'R_50', 'R_75', 'R_100', 'BOOM 300', 'CRASH 500'];
     const bestMarket = markets[Math.floor(Math.random() * markets.length)];
     const bestEntryPoint = (Math.random() * 100).toFixed(2);
     const confidence = (Math.random() * 30 + 70).toFixed(1);
-    
+
     this.scanStatus = `✅ Best market found: ${bestMarket} | Entry: ${bestEntryPoint} | Confidence: ${confidence}%`;
-    
+
     // Create a scanned bot profile
     const scannedBot = {
       id: Date.now(),
@@ -117,13 +128,13 @@ export class Home implements OnInit {
       ticksScanned: this.ticks,
       timestamp: new Date(),
       strategy: this.generateStrategy(),
-      performance: (Math.random() * 40 + 60).toFixed(1)
+      performance: (Math.random() * 40 + 60).toFixed(1),
     };
-    
+
     this.scannedBots.push(scannedBot);
     this.isScanning = false;
     this.scanProgress = 100;
-    
+
     // Optional: Auto-close modal after successful scan
     // setTimeout(() => {
     //   if (this.isAiScannerVisible) {
@@ -131,38 +142,38 @@ export class Home implements OnInit {
     //   }
     // }, 3000);
   }
-  
+
   generateStrategy(): string {
     const strategies = [
       'Mean Reversion with Bollinger Bands',
       'Trend Following with EMA Cross',
       'Momentum with RSI',
       'Breakout with Support/Resistance',
-      'Scalping with Tick Analysis'
+      'Scalping with Tick Analysis',
     ];
     return strategies[Math.floor(Math.random() * strategies.length)];
   }
-  
+
   loadDeepScannerBot(): void {
     if (this.scannedBots.length === 0) {
       this.scanStatus = '⚠️ Please run a deep scan first!';
       return;
     }
-    
+
     const latestBot = this.scannedBots[this.scannedBots.length - 1];
     this.scanStatus = `🤖 Bot loaded: ${latestBot.strategy} on ${latestBot.market} | Performance: ${latestBot.performance}%`;
-    
+
     console.log('Loading bot with config:', latestBot);
-    
+
     // Here you can navigate to bot builder with the config
     // this.router.navigate(['/bot-builder'], { state: { botConfig: latestBot } });
   }
-  
+
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-    // Mobile menu methods
+  // Mobile menu methods
   toggleMobileMenu(): void {
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
     if (this.isMobileMenuOpen) {

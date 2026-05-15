@@ -10,20 +10,28 @@ import { AuthService } from '../../services/auth.service';
 })
 export class Dashboard implements OnInit {
   safeUrl: SafeResourceUrl;
-  
+
   constructor(
     private sanitizer: DomSanitizer,
-    private authService: AuthService
+    private authService: AuthService,
   ) {
     this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl('https://bot.deriv.com');
   }
-
   ngOnInit() {
-    this.authService.getAccessToken().subscribe(token => {
-      if (token) {
-        this.updateIframeWithToken(token);
-      }
-    });
+    // Check for auth_success parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('auth_success')) {
+      console.log('Just completed OAuth flow, checking auth status...');
+      // Clear the URL parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Force an auth check
+      setTimeout(() => {
+        this.authService.checkAuthStatus();
+      }, 500);
+    } else {
+      // Normal auth check
+      this.authService.checkAuthStatus();
+    }
   }
 
   private updateIframeWithToken(token: string) {

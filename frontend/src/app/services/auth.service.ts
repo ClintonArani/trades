@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, interval } from 'rxjs';
-import { environment } from '../../environments/environment.prod';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -10,7 +10,7 @@ export class AuthService {
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
   private accessTokenSubject = new BehaviorSubject<string | null>(null);
   public accessToken$ = this.accessTokenSubject.asObservable(); // ✅ Make this public
-  
+
   constructor(private http: HttpClient) {
     console.log('AuthService initialized with API_URL:', this.API_URL);
     this.checkAuthStatus();
@@ -22,20 +22,24 @@ export class AuthService {
   }
 
   checkAuthStatus(): void {
-    this.http.get<{ authenticated: boolean; token?: string }>(`${this.API_URL}/api/auth/user`, { withCredentials: true })
+    console.log('Checking auth status...');
+    this.http
+      .get<{ authenticated: boolean; token?: string }>(`${this.API_URL}/api/auth/user`, {
+        withCredentials: true,
+      })
       .subscribe({
         next: (response) => {
+          console.log('Auth check response:', response);
           this.isAuthenticatedSubject.next(response.authenticated);
           if (response.authenticated && response.token) {
             this.accessTokenSubject.next(response.token);
-          } else {
-            this.accessTokenSubject.next(null);
           }
         },
-        error: () => {
+        error: (error) => {
+          console.error('Auth check error:', error);
           this.isAuthenticatedSubject.next(false);
           this.accessTokenSubject.next(null);
-        }
+        },
       });
   }
 
