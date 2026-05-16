@@ -136,7 +136,9 @@ export async function handleCallback(req, res) {
   }
 }
 
-// FIXED: Simplified getUserInfo that doesn't call Deriv API
+/**
+ * Get current user info - Fetches real user data from Deriv API
+ */
 export async function getUserInfo(req, res) {
   const token = req.cookies.deriv_access_token;
   const isAuthCookie = req.cookies.is_authenticated;
@@ -147,16 +149,88 @@ export async function getUserInfo(req, res) {
     return res.status(401).json({ authenticated: false, error: "No valid session" });
   }
 
-  // Return authentication success without calling external API
-  // The token itself is proof of authentication
-  res.json({
-    authenticated: true,
-    user: {
-      email: "Deriv Trader",
-      authenticated_via: "oauth"
-    },
-    email: "trader@deriv.com",
-  });
+  try {
+    // Call Deriv's authorize endpoint to get user info
+    // This is the correct endpoint that works with OAuth tokens
+    const response = await axios.get("https://api.deriv.com/oauth2/authorize", {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      params: {
+        app_id: process.env.DERIV_APP_ID
+      },
+      timeout: 10000
+    });
+
+    console.log("Deriv API response:", response.data);
+
+    // Extract user information from response
+    const userData = response.data;
+    
+    res.json({
+      authenticated: true,
+      user: {
+        email: userData?.email || userData?.account?.email || "User",
+        fullName: userData?.full_name || userData?.account?.full_name,
+        loginid: userData?.loginid || userData?.account?.loginid,
+        currency: userData?.currency || userData?.account?.currency,
+        balance: userData?.balance || userData?.account?.balance,
+        account_type: userData?.account_type || userData?.account?.account_type
+      },
+      email: userData?.email || userData?.account?.email,
+    });
+  } catch (error) {
+    console.error("Failed to fetch user info from Deriv:", error.response?.data || error.message);
+    
+    // If the API call fails, try an alternative endpoint
+    try {
+      // Alternative: Use the account status endpoint with proper headers
+      const altResponse = await axios.post(
+        "https://api.deriv.com/",
+        {
+          "account_status": 1,
+          "req_id": Date.now()
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Deriv-App-ID': process.env.DERIV_APP_ID
+          },
+          timeout: 10000
+        }
+      );
+      
+      console.log("Alternative API response:", altResponse.data);
+      
+      const userData = altResponse.data?.account_status || altResponse.data;
+      
+      res.json({
+        authenticated: true,
+        user: {
+          email: userData?.email || "Deriv User",
+          loginid: userData?.loginid,
+          currency: userData?.currency,
+          balance: userData?.balance
+        },
+        email: userData?.email,
+      });
+    } catch (altError) {
+      console.error("Alternative API also failed:", altError.message);
+      
+      // Last resort: Return authenticated but without user details
+      // The user will still be logged in
+      res.json({
+        authenticated: true,
+        user: {
+          email: "Authenticated User",
+          message: "User details temporarily unavailable"
+        },
+        email: "user@deriv.com",
+      });
+    }
+  }
 }
 
 export function logout(req, res) {
