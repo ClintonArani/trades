@@ -42,26 +42,23 @@ export class Home implements OnInit {
   constructor(public authService: AuthService) {}
 
   ngOnInit(): void {
-    console.log('Home component initialized');
-
-    this.authService.isAuthenticated$.subscribe((isAuth) => {
-      console.log('Auth state changed:', isAuth);
-      this.isAuthenticated = isAuth;
-      if (isAuth) {
-        console.log('User is authenticated, fetching user info...');
-        this.authService.getUserInfo().subscribe({
-          next: (data) => {
-            console.log('User info received:', data);
-            this.userEmail = data.user?.email || 'User';
-          },
-          error: (err) => console.error('Error fetching user info:', err),
-        });
-      }
-    });
-
-    // Force a check on component load
-    this.authService.checkAuthStatus();
-  }
+  this.authService.isAuthenticated$.subscribe(isAuth => {
+    this.isAuthenticated = isAuth;
+    if (isAuth) {
+      this.authService.getUserInfo().subscribe({
+        next: (data) => {
+          console.log('User info received:', data);
+          // Try multiple possible locations for the email
+          this.userEmail = data.user?.email || data.email || data.user?.loginid || 'User';
+          console.log('User email set to:', this.userEmail);
+        },
+        error: (err) => console.error('Error fetching user info:', err)
+      });
+    }
+  });
+  
+  this.authService.checkAuthStatus();
+}
 
   signInWithDeriv(): void {
     this.authService.login();

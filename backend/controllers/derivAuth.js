@@ -148,7 +148,7 @@ export async function handleCallback(req, res) {
 }
 
 /**
- * Get current user info - Fetches real user data from Deriv API
+ * Get current user info - Using Deriv's official API endpoint
  */
 export async function getUserInfo(req, res) {
   const token = req.cookies.deriv_access_token;
@@ -157,26 +157,26 @@ export async function getUserInfo(req, res) {
   console.log("=== getUserInfo Debug ===");
   console.log("Token exists:", !!token);
   console.log("Auth cookie:", isAuthCookie);
-  console.log("Token preview:", token ? token.substring(0, 50) + "..." : "none");
 
   if (!token || isAuthCookie !== 'true') {
     return res.status(401).json({ authenticated: false, error: "No valid session" });
   }
 
-  // Try to decode JWT token first - this often contains the user email
+  // Try to decode JWT token first - Deriv's tokens contain user info
   try {
     const tokenParts = token.split('.');
     if (tokenParts.length === 3) {
       const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-      console.log("JWT Payload decoded:", payload);
+      console.log("JWT Payload decoded:", JSON.stringify(payload, null, 2));
       
+      // Deriv's JWT typically contains email in the payload
       if (payload.email) {
         console.log("Found email in JWT:", payload.email);
         return res.json({
           authenticated: true,
           user: {
             email: payload.email,
-            loginid: payload.loginid,
+            loginid: payload.loginid || payload.sub,
             fullName: payload.full_name,
             account_type: payload.account_type
           },
@@ -188,22 +188,17 @@ export async function getUserInfo(req, res) {
     console.log("Could not decode JWT:", decodeError.message);
   }
 
-  // If JWT decode fails, try Deriv's account endpoint
+  // Using Deriv's official API endpoint from documentation: https://api.derivws.com
   try {
-    console.log("Fetching user info from Deriv API...");
+    console.log("Fetching user accounts from Deriv API...");
     
-    // Make a POST request to Deriv's API using their standard format
-    const response = await axios.post(
-      "https://api.deriv.com/",
-      {
-        "account_status": 1,
-        "req_id": Date.now()
-      },
+    // According to Deriv's OAuth documentation, use this endpoint to get user accounts
+    const response = await axios.get(
+      "https://api.derivws.com/trading/v1/options/accounts",
       {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Deriv-App-ID': process.env.DERIV_APP_ID
+          'Content-Type': 'application/json'
         },
         timeout: 10000
       }
@@ -211,74 +206,69 @@ export async function getUserInfo(req, res) {
 
     console.log("Deriv API Response:", JSON.stringify(response.data, null, 2));
 
-    if (response.data && response.data.account_status) {
-      const accountData = response.data.account_status;
-      console.log("Account data extracted:", accountData);
+    if (response.data && response.data.accounts && response.data.accounts.length > 0) {
+      const mainAccount = response.data.accounts.find(acc => acc.is_default) || response.data.accounts[0];
       
       return res.json({
         authenticated: true,
         user: {
-          email: accountData.email || "User",
-          loginid: accountData.loginid,
-          currency: accountData.currency,
-          balance: accountData.balance,
-          fullName: accountData.full_name,
-          account_type: accountData.account_type
+          email: mainAccount.email || response.data.email,
+          loginid: mainAccount.loginid,
+          currency: mainAccount.currency,
+          balance: mainAccount.balance,
+          account_type: mainAccount.account_type,
+          fullName: mainAccount.full_name
         },
-        email: accountData.email,
+        email: mainAccount.email || response.data.email,
       });
     }
+  } catch (error) {
+    console.error("Deriv accounts API call failed:", error.response?.data || error.message);
+  }
+
+  // Try the account status endpoint as fallback
+  try {
+    console.log("Trying account status endpoint...");
     
-    // Try alternative endpoint
-    const altResponse = await axios.post(
-      "https://api.deriv.com/",
-      {
-        "authorize": token,
-        "req_id": Date.now()
-      },
+    const response = await axios.get(
+      "https://api.derivws.com/account/v1/status",
       {
         headers: {
-          'Content-Type': 'application/json',
-          'Deriv-App-ID': process.env.DERIV_APP_ID
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         timeout: 10000
       }
     );
-    
-    console.log("Alternative API Response:", JSON.stringify(altResponse.data, null, 2));
-    
-    if (altResponse.data && altResponse.data.authorize) {
-      const userData = altResponse.data.authorize;
+
+    console.log("Account status response:", JSON.stringify(response.data, null, 2));
+
+    if (response.data) {
       return res.json({
         authenticated: true,
         user: {
-          email: userData.email,
-          loginid: userData.loginid,
-          currency: userData.currency,
-          balance: userData.balance,
-          fullName: userData.full_name,
-          account_type: userData.account_type
+          email: response.data.email,
+          loginid: response.data.loginid,
+          currency: response.data.currency,
+          balance: response.data.balance,
+          account_type: response.data.account_type
         },
-        email: userData.email,
+        email: response.data.email,
       });
     }
-    
   } catch (error) {
-    console.error("Deriv API call failed:", error.response?.data || error.message);
-    if (error.response?.data) {
-      console.error("Error details:", JSON.stringify(error.response.data));
-    }
+    console.error("Account status API call failed:", error.response?.data || error.message);
   }
 
-  // Return basic authentication with a placeholder
+  // Fallback: Return authenticated with basic info
   // The user can still use the bot even without fetching details
   res.json({
     authenticated: true,
     user: {
       email: "Deriv Trader",
-      message: "Authenticated successfully"
+      message: "Authenticated successfully. User details will appear on next login."
     },
-    email: "trader@deriv.com",
+    email: "Deriv Trader",
   });
 }
 
