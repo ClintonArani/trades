@@ -4,6 +4,7 @@ import crypto from "crypto";
 // In-memory store for PKCE verifiers
 const verifierStore = new Map();
 
+// Clean up expired verifiers every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [state, data] of verifierStore.entries()) {
@@ -13,22 +14,31 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// Generate PKCE code verifier
 function generateCodeVerifier() {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+// Generate PKCE code challenge
 async function generateCodeChallenge(verifier) {
   const hash = crypto.createHash("sha256").update(verifier).digest();
   return hash.toString("base64url");
 }
 
+/**
+ * Step 1: Redirect user to Deriv's OAuth authorization page
+ */
 export async function redirectToDeriv(req, res) {
   try {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
     const state = crypto.randomUUID();
 
-    verifierStore.set(state, { codeVerifier, createdAt: Date.now() });
+    verifierStore.set(state, {
+      codeVerifier,
+      createdAt: Date.now(),
+    });
+
     setTimeout(() => verifierStore.delete(state), 10 * 60 * 1000);
 
     const authUrl = new URL("https://auth.deriv.com/oauth2/auth");
@@ -48,6 +58,9 @@ export async function redirectToDeriv(req, res) {
   }
 }
 
+/**
+ * Step 2: Handle OAuth callback from Deriv
+ */
 export async function handleCallback(req, res) {
   const { code, state } = req.query;
 
@@ -97,8 +110,6 @@ export async function handleCallback(req, res) {
     res.clearCookie("deriv_access_token", { path: "/" });
     res.clearCookie("is_authenticated", { path: "/" });
 
-    const isProduction = process.env.NODE_ENV === "production";
-
     const cookieOptions = {
       httpOnly: true,
       secure: true,
@@ -143,96 +154,137 @@ export async function getUserInfo(req, res) {
   const token = req.cookies.deriv_access_token;
   const isAuthCookie = req.cookies.is_authenticated;
 
-  console.log("getUserInfo called - Token exists:", !!token, "Auth cookie:", isAuthCookie);
+  console.log("=== getUserInfo Debug ===");
+  console.log("Token exists:", !!token);
+  console.log("Auth cookie:", isAuthCookie);
+  console.log("Token preview:", token ? token.substring(0, 50) + "..." : "none");
 
   if (!token || isAuthCookie !== 'true') {
     return res.status(401).json({ authenticated: false, error: "No valid session" });
   }
 
+  // Try to decode JWT token first - this often contains the user email
   try {
-    // Call Deriv's authorize endpoint to get user info
-    // This is the correct endpoint that works with OAuth tokens
-    const response = await axios.get("https://api.deriv.com/oauth2/authorize", {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      params: {
-        app_id: process.env.DERIV_APP_ID
-      },
-      timeout: 10000
-    });
-
-    console.log("Deriv API response:", response.data);
-
-    // Extract user information from response
-    const userData = response.data;
-    
-    res.json({
-      authenticated: true,
-      user: {
-        email: userData?.email || userData?.account?.email || "User",
-        fullName: userData?.full_name || userData?.account?.full_name,
-        loginid: userData?.loginid || userData?.account?.loginid,
-        currency: userData?.currency || userData?.account?.currency,
-        balance: userData?.balance || userData?.account?.balance,
-        account_type: userData?.account_type || userData?.account?.account_type
-      },
-      email: userData?.email || userData?.account?.email,
-    });
-  } catch (error) {
-    console.error("Failed to fetch user info from Deriv:", error.response?.data || error.message);
-    
-    // If the API call fails, try an alternative endpoint
-    try {
-      // Alternative: Use the account status endpoint with proper headers
-      const altResponse = await axios.post(
-        "https://api.deriv.com/",
-        {
-          "account_status": 1,
-          "req_id": Date.now()
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Deriv-App-ID': process.env.DERIV_APP_ID
+    const tokenParts = token.split('.');
+    if (tokenParts.length === 3) {
+      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+      console.log("JWT Payload decoded:", payload);
+      
+      if (payload.email) {
+        console.log("Found email in JWT:", payload.email);
+        return res.json({
+          authenticated: true,
+          user: {
+            email: payload.email,
+            loginid: payload.loginid,
+            fullName: payload.full_name,
+            account_type: payload.account_type
           },
-          timeout: 10000
-        }
-      );
+          email: payload.email,
+        });
+      }
+    }
+  } catch (decodeError) {
+    console.log("Could not decode JWT:", decodeError.message);
+  }
+
+  // If JWT decode fails, try Deriv's account endpoint
+  try {
+    console.log("Fetching user info from Deriv API...");
+    
+    // Make a POST request to Deriv's API using their standard format
+    const response = await axios.post(
+      "https://api.deriv.com/",
+      {
+        "account_status": 1,
+        "req_id": Date.now()
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Deriv-App-ID': process.env.DERIV_APP_ID
+        },
+        timeout: 10000
+      }
+    );
+
+    console.log("Deriv API Response:", JSON.stringify(response.data, null, 2));
+
+    if (response.data && response.data.account_status) {
+      const accountData = response.data.account_status;
+      console.log("Account data extracted:", accountData);
       
-      console.log("Alternative API response:", altResponse.data);
-      
-      const userData = altResponse.data?.account_status || altResponse.data;
-      
-      res.json({
+      return res.json({
         authenticated: true,
         user: {
-          email: userData?.email || "Deriv User",
-          loginid: userData?.loginid,
-          currency: userData?.currency,
-          balance: userData?.balance
+          email: accountData.email || "User",
+          loginid: accountData.loginid,
+          currency: accountData.currency,
+          balance: accountData.balance,
+          fullName: accountData.full_name,
+          account_type: accountData.account_type
         },
-        email: userData?.email,
-      });
-    } catch (altError) {
-      console.error("Alternative API also failed:", altError.message);
-      
-      // Last resort: Return authenticated but without user details
-      // The user will still be logged in
-      res.json({
-        authenticated: true,
-        user: {
-          email: "Authenticated User",
-          message: "User details temporarily unavailable"
-        },
-        email: "user@deriv.com",
+        email: accountData.email,
       });
     }
+    
+    // Try alternative endpoint
+    const altResponse = await axios.post(
+      "https://api.deriv.com/",
+      {
+        "authorize": token,
+        "req_id": Date.now()
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Deriv-App-ID': process.env.DERIV_APP_ID
+        },
+        timeout: 10000
+      }
+    );
+    
+    console.log("Alternative API Response:", JSON.stringify(altResponse.data, null, 2));
+    
+    if (altResponse.data && altResponse.data.authorize) {
+      const userData = altResponse.data.authorize;
+      return res.json({
+        authenticated: true,
+        user: {
+          email: userData.email,
+          loginid: userData.loginid,
+          currency: userData.currency,
+          balance: userData.balance,
+          fullName: userData.full_name,
+          account_type: userData.account_type
+        },
+        email: userData.email,
+      });
+    }
+    
+  } catch (error) {
+    console.error("Deriv API call failed:", error.response?.data || error.message);
+    if (error.response?.data) {
+      console.error("Error details:", JSON.stringify(error.response.data));
+    }
   }
+
+  // Return basic authentication with a placeholder
+  // The user can still use the bot even without fetching details
+  res.json({
+    authenticated: true,
+    user: {
+      email: "Deriv Trader",
+      message: "Authenticated successfully"
+    },
+    email: "trader@deriv.com",
+  });
 }
 
+/**
+ * Logout
+ */
 export function logout(req, res) {
   console.log("Logout called");
 
@@ -250,6 +302,9 @@ export function logout(req, res) {
   res.json({ success: true, message: "Logged out successfully" });
 }
 
+/**
+ * Refresh token
+ */
 export async function refreshToken(req, res) {
   const refreshToken = req.cookies.deriv_refresh_token;
 
