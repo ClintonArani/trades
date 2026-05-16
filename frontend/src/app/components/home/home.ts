@@ -42,23 +42,35 @@ export class Home implements OnInit {
   constructor(public authService: AuthService) {}
 
   ngOnInit(): void {
-  this.authService.isAuthenticated$.subscribe(isAuth => {
-    this.isAuthenticated = isAuth;
-    if (isAuth) {
-      this.authService.getUserInfo().subscribe({
-        next: (data) => {
-          console.log('User info received:', data);
-          // Try multiple possible locations for the email
-          this.userEmail = data.user?.email || data.email || data.user?.loginid || 'User';
-          console.log('User email set to:', this.userEmail);
-        },
-        error: (err) => console.error('Error fetching user info:', err)
-      });
-    }
-  });
-  
-  this.authService.checkAuthStatus();
-}
+    console.log('Home component initialized');
+
+    this.authService.isAuthenticated$.subscribe((isAuth) => {
+      console.log('Auth state changed:', isAuth);
+      this.isAuthenticated = isAuth;
+      if (isAuth) {
+        this.authService.getUserInfo().subscribe({
+          next: (data) => {
+            console.log('User info received:', data);
+            console.log('Full data object:', JSON.stringify(data, null, 2));
+
+            // Try multiple possible locations for the email
+            const email = data.user?.email || data.email || data.user?.loginid || 'User';
+            console.log('Extracted email:', email);
+
+            this.userEmail = email;
+            console.log('User email set to:', this.userEmail);
+          },
+          error: (err) => {
+            console.error('Error fetching user info:', err);
+            this.userEmail = 'User';
+          },
+        });
+      }
+    });
+
+    // Force an initial auth check
+    this.authService.checkAuthStatus();
+  }
 
   signInWithDeriv(): void {
     this.authService.login();

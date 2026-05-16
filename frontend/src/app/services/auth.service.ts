@@ -57,6 +57,9 @@ export class AuthService {
   }
 
   getUserInfo(): Observable<any> {
-    return this.http.get(`${this.API_URL}/api/auth/user`, { withCredentials: true });
+    console.log('Calling getUserInfo API...');
+    return this.http.get(`${this.API_URL}/api/auth/user`, {
+      withCredentials: true,
+    });
   }
 }
