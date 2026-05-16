@@ -7,7 +7,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 
-// For ES modules to get __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -16,42 +15,45 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Session middleware - FIXED: Added sameSite and secure settings
+// Session middleware
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Must be true for sameSite='none'
     httpOnly: true,
-    sameSite: 'lax',  // ADD THIS
+    sameSite: 'none', // Changed to 'none' for cross-domain
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
-// CORS configuration - FIXED: Corrected URLs
+// CORS configuration - ADD YOUR NETLIFY URL
 const allowedOrigins = [
-  'http://localhost:4200', 
-  'https://wisetrades.site',          // ADDED: Your custom domain if you have one
-  'https://trades-16yb.onrender.com'  // ADDED: Your backend itself for testing
+  'http://localhost:4200',
+  'https://www.wisetrades.site',  // ADDED: Your Netlify frontend URL
+  'https://wisetrades.site',
+  'https://trades-16yb.onrender.com'
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
+    // Allow requests with no origin
     if (!origin) return callback(null, true);
     
+    // Allow localhost for development
+    if (origin.includes('localhost')) return callback(null, true);
+    
     if (allowedOrigins.indexOf(origin) === -1) {
-      console.warn(`CORS blocked origin: ${origin}`);  // ADDED: Helpful for debugging
-      const msg = 'CORS policy does not allow this origin.';
-      return callback(new Error(msg), false);
+      console.warn(`CORS blocked origin: ${origin}`);
+      return callback(new Error('CORS policy does not allow this origin.'), false);
     }
     return callback(null, true);
   },
-  credentials: true,  // This is CRITICAL for cookies
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Set-Cookie'],  // ADDED: Set-Cookie
-  exposedHeaders: ['Set-Cookie']  // ADDED: This allows frontend to read cookies
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Set-Cookie'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
 app.use(cookieParser());
@@ -60,7 +62,7 @@ app.use(express.json());
 // Request logging
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Cookies:', req.cookies);  // ADDED: Debug logging
+  console.log('Cookies received:', Object.keys(req.cookies));
   next();
 });
 
@@ -72,15 +74,13 @@ app.get('/api/health', (req, res) => {
 // Auth routes
 app.use('/api/auth', authRoutes);
 
-// Test endpoint to check CORS and cookies (ADDED for debugging)
+// Test endpoint for debugging
 app.get('/api/test-auth', (req, res) => {
-  const token = req.cookies.deriv_access_token;
-  const isAuth = req.cookies.is_authenticated;
-  console.log('Test auth - Token:', !!token, 'is_authenticated:', isAuth);
+  console.log('Test auth - Cookies:', req.cookies);
   res.json({ 
-    hasToken: !!token, 
-    isAuthenticated: isAuth === 'true',
-    cookies: Object.keys(req.cookies)
+    hasToken: !!req.cookies.deriv_access_token,
+    isAuthenticated: req.cookies.is_authenticated === 'true',
+    cookieNames: Object.keys(req.cookies)
   });
 });
 

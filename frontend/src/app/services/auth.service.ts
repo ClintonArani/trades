@@ -9,7 +9,7 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
   private accessTokenSubject = new BehaviorSubject<string | null>(null);
-  public accessToken$ = this.accessTokenSubject.asObservable(); // ✅ Make this public
+  public accessToken$ = this.accessTokenSubject.asObservable();
 
   constructor(private http: HttpClient) {
     console.log('AuthService initialized with API_URL:', this.API_URL);
@@ -37,14 +37,19 @@ export class AuthService {
         },
         error: (error) => {
           console.error('Auth check error:', error);
-          this.isAuthenticatedSubject.next(false);
-          this.accessTokenSubject.next(null);
+          // Check if cookie exists as fallback
+          const hasCookie = document.cookie.includes('is_authenticated=true');
+          console.log('Has auth cookie?', hasCookie);
+          this.isAuthenticatedSubject.next(hasCookie);
+          if (!hasCookie) {
+            this.accessTokenSubject.next(null);
+          }
         },
       });
   }
 
   getAccessToken(): Observable<string | null> {
-    return this.accessToken$; // ✅ Return the observable directly
+    return this.accessToken$;
   }
 
   logout(): Observable<any> {
