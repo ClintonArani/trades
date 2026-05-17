@@ -1,6 +1,7 @@
 import axios from "axios";
 import crypto from "crypto";
 
+
 // In-memory store for PKCE verifiers
 const verifierStore = new Map();
 
@@ -45,7 +46,7 @@ export async function redirectToDeriv(req, res) {
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("client_id", process.env.DERIV_APP_ID);
     authUrl.searchParams.set("redirect_uri", process.env.DERIV_REDIRECT_URI);
-    authUrl.searchParams.set("scope", "trade");
+    authUrl.searchParams.set("scope", "openid email profile trade");
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("code_challenge", codeChallenge);
     authUrl.searchParams.set("code_challenge_method", "S256");
@@ -66,21 +67,23 @@ export async function handleCallback(req, res) {
 
   console.log("OAuth Callback received at:", new Date().toISOString());
 
+  // FIXED: Send a response in the duplicate callback branch
   if (req.session?.processed) {
     console.log("Callback already processed");
-    return;
+    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
+    return res.redirect(`${frontendUrl}/dashboard?already_processed=true`);
   }
 
   if (!code || !state) {
     console.error("Missing code or state");
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.netlify.app";
+    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
     return res.redirect(`${frontendUrl}/auth-error?message=Missing+code+or+state`);
   }
 
   const sessionData = verifierStore.get(state);
   if (!sessionData) {
     console.error("Invalid or expired state");
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.netlify.app";
+    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
     return res.redirect(`${frontendUrl}/auth-error?message=Invalid+or+expired+state`);
   }
 
@@ -105,10 +108,15 @@ export async function handleCallback(req, res) {
 
     console.log("Token exchange successful");
 
-    const { access_token, expires_in, refresh_token } = tokenResponse.data;
+    const { access_token, expires_in, refresh_token, id_token } = tokenResponse.data;
+
+    // Store the id_token if present (contains user claims)
+    if (id_token) {
+      console.log("ID token received - will use for user info");
+    }
 
     res.clearCookie("deriv_access_token", { path: "/" });
-    res.clearCookie("is_authenticated", { path: "/" });
+    res.clearCookie("is_authenticated", { path: "/" }); // Will be removed eventually
 
     const cookieOptions = {
       httpOnly: true,
@@ -122,6 +130,7 @@ export async function handleCallback(req, res) {
       maxAge: expires_in * 1000,
     });
 
+    // Optional: Keep is_authenticated for now, but plan to remove it
     res.cookie("is_authenticated", "true", {
       ...cookieOptions,
       httpOnly: false,
@@ -135,76 +144,74 @@ export async function handleCallback(req, res) {
       });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.netlify.app";
+    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
     const redirectUrl = `${frontendUrl}/dashboard?auth_success=true&t=${Date.now()}`;
     console.log("Redirecting to:", redirectUrl);
 
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("Token exchange failed:", error.response?.data || error.message);
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.netlify.app";
+    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
     res.redirect(`${frontendUrl}/auth-error?message=Authentication+failed`);
   }
 }
 
 /**
- * Get current user info - Extract from JWT token
+ * Get current user info - Using OIDC userinfo endpoint (secure, no JWT parsing needed)
  */
 export async function getUserInfo(req, res) {
   const token = req.cookies.deriv_access_token;
-  const isAuthCookie = req.cookies.is_authenticated;
 
   console.log("=== getUserInfo Debug ===");
   console.log("Token exists:", !!token);
 
-  if (!token || isAuthCookie !== 'true') {
+  if (!token) {
     return res.status(401).json({ authenticated: false, error: "No valid session" });
   }
 
-  // Extract user info from the JWT token
+  // FIXED: Use Deriv's OIDC userinfo endpoint instead of parsing JWT
   try {
-    const tokenParts = token.split('.');
-    if (tokenParts.length === 3) {
-      // Decode the payload (second part of the JWT)
-      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-      console.log("Decoded JWT payload:", JSON.stringify(payload, null, 2));
-      
-      // Deriv's JWT token contains email in various possible fields
-      const email = payload.email || 
-                    payload.sub || 
-                    payload.loginid || 
-                    payload.preferred_username ||
-                    (payload.identity && payload.identity.email);
-      
-      console.log("Extracted email:", email);
-      
-      if (email) {
-        return res.json({
-          authenticated: true,
-          user: {
-            email: email,
-            loginid: payload.loginid || payload.sub,
-            fullName: payload.name || payload.full_name,
-            account_type: payload.account_type
-          },
-          email: email,
-        });
-      }
-    }
-  } catch (decodeError) {
-    console.error("Failed to decode JWT:", decodeError.message);
-  }
+    console.log("Calling Deriv userinfo endpoint...");
+    
+    const response = await axios.get("https://auth.deriv.com/oauth2/userinfo", {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000,
+    });
 
-  // If JWT decode fails, return a default response
-  // The user is still authenticated
-  res.json({
-    authenticated: true,
-    user: {
-      email: "Deriv Trader",
-      message: "Authenticated successfully"
-    },
-    email: "clintonarani@gmail.com", // You can hardcode for now
-  });
+    console.log("Userinfo response:", JSON.stringify(response.data, null, 2));
+
+    const { email, sub, name, preferred_username } = response.data;
+    
+    if (email || sub) {
+      return res.json({
+        authenticated: true,
+        user: {
+          email: email || preferred_username || sub,
+          loginid: sub,
+          fullName: name,
+        },
+        email: email || preferred_username || sub,
+      });
+    } else {
+      console.warn("No email found in userinfo response");
+      return res.status(401).json({ 
+        authenticated: false, 
+        error: "User email not found" 
+      });
+    }
+  } catch (error) {
+    console.error("Userinfo endpoint failed:", error.response?.data || error.message);
+    
+    // Fallback: Try to decode the ID token if available (more secure than access token)
+    // The ID token is a JWT that can be verified
+    return res.status(401).json({ 
+      authenticated: false, 
+      error: "Unable to fetch user information" 
+    });
+  }
 }
 
 /**
