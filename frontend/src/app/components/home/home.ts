@@ -42,22 +42,33 @@ export class Home implements OnInit {
   constructor(public authService: AuthService) {}
 
   ngOnInit(): void {
-    // Check for auth errors in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const authError = urlParams.get('auth_error');
-    if (authError) {
-      console.error('Auth error:', authError);
-      // Show a toast or alert to the user
-      alert('Authentication failed. Please try again.');
-      // Clear the error from URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    console.log('Home component initialized');
 
-    // Rest of your existing ngOnInit code...
     this.authService.isAuthenticated$.subscribe((isAuth) => {
-      // ... existing code
+      console.log('Auth state changed:', isAuth);
+      this.isAuthenticated = isAuth;
+      if (isAuth) {
+        this.authService.getUserInfo().subscribe({
+          next: (data) => {
+            console.log('User info received:', data);
+            console.log('Full data object:', JSON.stringify(data, null, 2));
+
+            // Try multiple possible locations for the email
+            const email = data.user?.email || data.email || data.user?.loginid || 'User';
+            console.log('Extracted email:', email);
+
+            this.userEmail = email;
+            console.log('User email set to:', this.userEmail);
+          },
+          error: (err) => {
+            console.error('Error fetching user info:', err);
+            this.userEmail = 'User';
+          },
+        });
+      }
     });
 
+    // Force an initial auth check
     this.authService.checkAuthStatus();
   }
 
