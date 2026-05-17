@@ -1,7 +1,6 @@
 import axios from "axios";
 import crypto from "crypto";
 
-
 // In-memory store for PKCE verifiers
 const verifierStore = new Map();
 
@@ -67,24 +66,22 @@ export async function handleCallback(req, res) {
 
   console.log("OAuth Callback received at:", new Date().toISOString());
 
-  // FIXED: Send a response in the duplicate callback branch
+  // Send a response in the duplicate callback branch
   if (req.session?.processed) {
     console.log("Callback already processed");
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
-    return res.redirect(`${frontendUrl}/dashboard?already_processed=true`);
+    // Use FRONTEND_URL from env, not hardcoded fallback
+    return res.redirect(`${process.env.FRONTEND_URL}/dashboard?already_processed=true`);
   }
 
   if (!code || !state) {
     console.error("Missing code or state");
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
-    return res.redirect(`${frontendUrl}/auth-error?message=Missing+code+or+state`);
+    return res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Missing+code+or+state`);
   }
 
   const sessionData = verifierStore.get(state);
   if (!sessionData) {
     console.error("Invalid or expired state");
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
-    return res.redirect(`${frontendUrl}/auth-error?message=Invalid+or+expired+state`);
+    return res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Invalid+or+expired+state`);
   }
 
   if (req.session) req.session.processed = true;
@@ -108,15 +105,10 @@ export async function handleCallback(req, res) {
 
     console.log("Token exchange successful");
 
-    const { access_token, expires_in, refresh_token, id_token } = tokenResponse.data;
-
-    // Store the id_token if present (contains user claims)
-    if (id_token) {
-      console.log("ID token received - will use for user info");
-    }
+    const { access_token, expires_in, refresh_token } = tokenResponse.data;
 
     res.clearCookie("deriv_access_token", { path: "/" });
-    res.clearCookie("is_authenticated", { path: "/" }); // Will be removed eventually
+    res.clearCookie("is_authenticated", { path: "/" });
 
     const cookieOptions = {
       httpOnly: true,
@@ -130,7 +122,6 @@ export async function handleCallback(req, res) {
       maxAge: expires_in * 1000,
     });
 
-    // Optional: Keep is_authenticated for now, but plan to remove it
     res.cookie("is_authenticated", "true", {
       ...cookieOptions,
       httpOnly: false,
@@ -144,20 +135,19 @@ export async function handleCallback(req, res) {
       });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
-    const redirectUrl = `${frontendUrl}/dashboard?auth_success=true&t=${Date.now()}`;
+    // Use FRONTEND_URL from env
+    const redirectUrl = `${process.env.FRONTEND_URL}/dashboard?auth_success=true&t=${Date.now()}`;
     console.log("Redirecting to:", redirectUrl);
 
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("Token exchange failed:", error.response?.data || error.message);
-    const frontendUrl = process.env.FRONTEND_URL || "https://wisetrades.site";
-    res.redirect(`${frontendUrl}/auth-error?message=Authentication+failed`);
+    res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Authentication+failed`);
   }
 }
 
 /**
- * Get current user info - Using OIDC userinfo endpoint (secure, no JWT parsing needed)
+ * Get current user info - Using OIDC userinfo endpoint
  */
 export async function getUserInfo(req, res) {
   const token = req.cookies.deriv_access_token;
@@ -169,7 +159,7 @@ export async function getUserInfo(req, res) {
     return res.status(401).json({ authenticated: false, error: "No valid session" });
   }
 
-  // FIXED: Use Deriv's OIDC userinfo endpoint instead of parsing JWT
+  // Use Deriv's OIDC userinfo endpoint
   try {
     console.log("Calling Deriv userinfo endpoint...");
     
@@ -205,8 +195,31 @@ export async function getUserInfo(req, res) {
   } catch (error) {
     console.error("Userinfo endpoint failed:", error.response?.data || error.message);
     
-    // Fallback: Try to decode the ID token if available (more secure than access token)
-    // The ID token is a JWT that can be verified
+    // Fallback: Try to decode the JWT token (like your working version)
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+        console.log("Fallback - Decoded JWT payload:", JSON.stringify(payload, null, 2));
+        
+        const email = payload.email || payload.sub || payload.loginid || payload.preferred_username;
+        
+        if (email) {
+          return res.json({
+            authenticated: true,
+            user: {
+              email: email,
+              loginid: payload.loginid || payload.sub,
+              fullName: payload.name || payload.full_name,
+            },
+            email: email,
+          });
+        }
+      }
+    } catch (decodeError) {
+      console.error("Fallback JWT decode also failed:", decodeError.message);
+    }
+    
     return res.status(401).json({ 
       authenticated: false, 
       error: "Unable to fetch user information" 

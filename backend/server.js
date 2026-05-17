@@ -31,7 +31,7 @@ app.use(session({
 // CORS configuration - ADD YOUR NETLIFY URL
 const allowedOrigins = [
   'http://localhost:4200',
-  'https://www.wisetrades.site',  // ADDED: Your Netlify frontend URL
+  'https://www.wisetrades.site', 
   'https://wisetrades.site',
   'https://trades-16yb.onrender.com'
 ];
