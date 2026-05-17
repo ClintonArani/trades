@@ -9,6 +9,7 @@ import { FrequencyAnalysis } from './components/frequency-analysis/frequency-ana
 import {DigitalTool} from "./components/digital-tool/digital-tool"; // Placeholder for Digital Tool
 import { AnalysisTool } from './components/analysis-tool/analysis-tool';
 import { FxCharts } from './components/fx-charts/fx-charts'; 
+import { AuthError } from './components/auth-error/auth-error'; // Placeholder for Auth Error
 
 export const routes: Routes = [
   {
@@ -25,6 +26,7 @@ export const routes: Routes = [
       { path: 'frequency-analysis', component: FrequencyAnalysis },
       { path: 'digital-tool', component: DigitalTool }, 
       { path: 'fx-charts', component: FxCharts },
+      { path: 'auth-error', component: AuthError},
       // Optional default child route
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

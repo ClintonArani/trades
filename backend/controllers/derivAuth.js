@@ -69,24 +69,24 @@ export async function handleCallback(req, res) {
   // Send a response in the duplicate callback branch
   if (req.session?.processed) {
     console.log("Callback already processed");
-    // Use FRONTEND_URL from env, not hardcoded fallback
-    return res.redirect(`${process.env.FRONTEND_URL}/dashboard?already_processed=true`);
+    return res.redirect(`${process.env.FRONTEND_URL}/?auth_error=already_processed`);
   }
 
   if (!code || !state) {
     console.error("Missing code or state");
-    return res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Missing+code+or+state`);
+    return res.redirect(`${process.env.FRONTEND_URL}/?auth_error=missing_code`);
   }
 
   const sessionData = verifierStore.get(state);
   if (!sessionData) {
     console.error("Invalid or expired state");
-    return res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Invalid+or+expired+state`);
+    return res.redirect(`${process.env.FRONTEND_URL}/?auth_error=expired_state`);
   }
 
   if (req.session) req.session.processed = true;
   verifierStore.delete(state);
 
+  // START OF TRY-CATCH BLOCK
   try {
     const tokenResponse = await axios.post(
       "https://auth.deriv.com/oauth2/token",
@@ -135,15 +135,16 @@ export async function handleCallback(req, res) {
       });
     }
 
-    // Use FRONTEND_URL from env
     const redirectUrl = `${process.env.FRONTEND_URL}/dashboard?auth_success=true&t=${Date.now()}`;
     console.log("Redirecting to:", redirectUrl);
 
     res.redirect(redirectUrl);
   } catch (error) {
+    // This catch block works with the try above
     console.error("Token exchange failed:", error.response?.data || error.message);
-    res.redirect(`${process.env.FRONTEND_URL}/auth-error?message=Authentication+failed`);
+    res.redirect(`${process.env.FRONTEND_URL}/?auth_error=exchange_failed`);
   }
+  // END OF TRY-CATCH BLOCK
 }
 
 /**
